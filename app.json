@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Vitalis",
+    "slug": "vitalis",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.example.vitalis",
+      "supportsTablet": false,
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Vitalis reads your heart rate, HRV, sleep, activity and body data from Apple Health to calculate recovery, strain and sleep scores on your phone.",
+        "NSHealthUpdateUsageDescription": "Vitalis does not write to Apple Health."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.background-delivery": false
+      }
+    },
+    "android": {
+      "package": "com.example.vitalis",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#13233c"
+      },
+      "permissions": [
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_BODY_WATER_MASS",
+        "android.permission.health.READ_BONE_MASS",
+        "android.permission.health.READ_HEALTH_DATA_HISTORY"
+      ]
+    },
+    "plugins": [
+      "expo-dev-client",
+      "react-native-health",
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9dc6a626-2a98-41f8-be3d-ba0c72b205af"
+      }
+    }
+  }
+}
