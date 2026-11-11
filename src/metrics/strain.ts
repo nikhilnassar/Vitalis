@@ -8,6 +8,7 @@ export interface StrainResult {
   avgHr?: number;
   peakHr?: number;
   source: 'heart-rate' | 'estimated';
+  hasData: boolean; // false when there is no heart-rate stream, workout or step count to base a score on
 }
 
 const ZONE_WEIGHTS = [0, 1, 2, 3, 4, 5];
@@ -58,6 +59,7 @@ export function computeStrain(day: DailyData, profile: UserProfile, restingHr?: 
       avgHr: round(sum / samples.length),
       peakHr: peak,
       source: 'heart-rate',
+      hasData: true,
     };
   }
 
@@ -69,5 +71,6 @@ export function computeStrain(day: DailyData, profile: UserProfile, restingHr?: 
     load: round(load, 1),
     zoneMinutes,
     source: 'estimated',
+    hasData: day.workouts.length > 0 || (day.steps ?? 0) > 0,
   };
 }

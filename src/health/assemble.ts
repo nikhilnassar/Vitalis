@@ -110,3 +110,30 @@ export function resolveProfile(entered: Partial<UserProfile>, fromPlatform: Part
   if (!defined(p.age) || !defined(p.sex) || !defined(p.heightCm) || !defined(p.weightKg)) return undefined;
   return p as UserProfile;
 }
+
+export interface CoverageItem {
+  key: string;
+  label: string;
+  emoji: string;
+  days: number; // distinct days with data in the window
+  window: number;
+  tip: string;
+  latest?: number; // timestamp of the newest record, so late tracker syncs are visible
+}
+
+/** What the phone's health store is actually giving us, so missing data is visible instead of silent. */
+export function coverage(raw: RawHealthData, platform: string, now = Date.now(), window = 7): CoverageItem[] {
+  const from = dayKey(now - (window - 1) * 24 * HOUR);
+  const daysOf = (ts: number[]) => new Set(ts.map((t) => dayKey(t)).filter((k) => k >= from)).size;
+  const item = (key: string, label: string, emoji: string, ts: number[], tip: string): CoverageItem => ({ key, label, emoji, days: daysOf(ts), window, tip, latest: ts.length ? Math.max(...ts) : undefined });
+  return [
+    item('sleep', 'Sleep', '🌙', raw.sleep.map((x) => x.end), `Wear your tracker overnight and make sure it shares sleep with ${platform}.`),
+    item('rhr', 'Resting heart rate', '🫀', [...raw.restingHr.map((x) => x.t), ...raw.heartRate.map((x) => x.t)], `Needed for recovery. Allow heart rate in ${platform}.`),
+    item('hr', 'Heart-rate stream', '💓', raw.heartRate.map((x) => x.t), `Needed for strain. Turn on continuous heart rate sharing to ${platform} in your tracker's app.`),
+    item('hrv', 'Overnight HRV', '📉', raw.hrv.map((x) => x.t), 'Many trackers do not share HRV. Recovery still works from resting heart rate and sleep, just with less precision.'),
+    item('steps', 'Steps', '👟', raw.steps.map((x) => x.start), `Allow steps in ${platform}, and check your tracker's app is set to share them.`),
+    item('energy', 'Active calories', '🔥', raw.activeEnergy.map((x) => x.start), 'Without these, calorie burn is estimated from steps and workouts.'),
+    item('weight', 'Weight', '⚖️', raw.weight.map((x) => x.t), 'Turn on sharing in your scale app, or add weigh-ins by hand.'),
+    item('bp', 'Blood pressure', '🩺', raw.bp.map((x) => x.t), 'Turn on sharing in your cuff app, or log readings by hand.'),
+  ];
+}

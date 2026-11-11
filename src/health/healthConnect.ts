@@ -42,23 +42,55 @@ export async function requestAccess(): Promise<void> {
   ] as any);
 }
 
-async function read(recordType: string, start: Date, end: Date): Promise<any[]> {
+/** Background-safe: no permission dialogs (they cannot be shown headless), just make sure the client is ready. */
+export async function initQuiet(): Promise<void> {
+  if ((await getSdkStatus()) !== SdkAvailabilityStatus.SDK_AVAILABLE) throw new Error('Health Connect is not available.');
+  if (!(await initialize())) throw new Error('Could not initialise Health Connect.');
+}
+
+/** Lets scheduled updates read while the app is closed. Asked only when the person turns on notifications. */
+export async function requestBackgroundRead(): Promise<boolean> {
+  try {
+    await initQuiet();
+    const granted: any[] = await requestPermission([{ accessType: 'read', recordType: 'BackgroundAccessPermission' }] as any);
+    return granted.some((g) => g.recordType === 'BackgroundAccessPermission');
+  } catch {
+    return false;
+  }
+}
+
+async function readAll(recordType: string, start: Date, end: Date): Promise<any[]> {
   const out: any[] = [];
   let pageToken: string | undefined;
-  try {
-    do {
-      const res: any = await readRecords(recordType as any, {
-        timeRangeFilter: { operator: 'between', startTime: start.toISOString(), endTime: end.toISOString() },
-        pageSize: 5000,
-        pageToken,
-      } as any);
-      out.push(...(res.records ?? []));
-      pageToken = res.pageToken;
-    } while (pageToken);
-  } catch {
-    // permission not granted for this type, or no data: treat as empty
-  }
+  do {
+    const res: any = await readRecords(recordType as any, {
+      timeRangeFilter: { operator: 'between', startTime: start.toISOString(), endTime: end.toISOString() },
+      pageSize: 5000,
+      pageToken,
+    } as any);
+    out.push(...(res.records ?? []));
+    pageToken = res.pageToken;
+  } while (pageToken);
   return out;
+}
+
+interface ReadResult {
+  records: any[];
+  error?: string; // set when the type could not be read at all (usually permission)
+  limited?: boolean; // the long window was refused, so only the last ~30 days were read
+}
+
+/** Without the history permission a request reaching further back than 30 days is refused outright. */
+async function read(recordType: string, start: Date, end: Date, fallbackStart: Date): Promise<ReadResult> {
+  try {
+    return { records: await readAll(recordType, start, end) };
+  } catch {
+    try {
+      return { records: await readAll(recordType, fallbackStart, end), limited: true };
+    } catch (e: any) {
+      return { records: [], error: `${recordType}: ${String(e?.message ?? e).slice(0, 140)}` };
+    }
+  }
 }
 
 // Health Connect SleepStageRecord codes
@@ -77,9 +109,10 @@ export async function readRaw(days = 90): Promise<RawHealthData> {
   // Without the history permission, Health Connect only exposes ~30 days before the first permission grant.
   const end = new Date();
   const start = new Date(end.getTime() - (days + 1) * 86400_000);
+  const fallbackStart = new Date(end.getTime() - 29 * 86400_000);
   const raw = emptyRaw();
 
-  const [hr, hrv, rhr, resp, sleep, steps, energy, vo2, weight, fat, height, ex, bp, lean, water, bone] = await Promise.all(
+  const results = await Promise.all(
     [
       'HeartRate',
       'HeartRateVariabilityRmssd',
@@ -97,8 +130,13 @@ export async function readRaw(days = 90): Promise<RawHealthData> {
       'LeanBodyMass',
       'BodyWaterMass',
       'BoneMass',
-    ].map((t) => read(t, start, end)),
+    ].map((t) => read(t, start, end, fallbackStart)),
   );
+  const [hr, hrv, rhr, resp, sleep, steps, energy, vo2, weight, fat, height, ex, bp, lean, water, bone] = results.map((r) => r.records);
+  raw.meta = {
+    errors: results.map((r) => r.error).filter((e): e is string => !!e),
+    limitedHistory: results.some((r) => r.limited),
+  };
 
   for (const r of hr) for (const s of r.samples ?? []) raw.heartRate.push({ t: ts(s.time), bpm: s.beatsPerMinute });
   raw.hrv = hrv.map((r) => ({ t: ts(r.time), ms: r.heartRateVariabilityMillis }));

@@ -28,7 +28,7 @@ export function toModelDays(days: DailyData[], metrics: DayMetrics[]): ModelDay[
     rhr: d.rhr,
     resp: d.respRate,
     sleepHours: metrics[i]?.sleep?.hoursAsleep,
-    strain: metrics[i]?.strain.strain,
+    strain: metrics[i]?.strain.hasData ? metrics[i].strain.strain : undefined,
     stepsK: defined(d.steps) ? d.steps / 1000 : undefined,
     sys: d.bp.length ? mean(d.bp.map((b) => b.sys)) : undefined,
     dia: d.bp.length ? mean(d.bp.map((b) => b.dia)) : undefined,

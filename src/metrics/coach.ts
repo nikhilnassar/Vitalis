@@ -7,6 +7,7 @@ export interface Coaching {
   tonightSleepHours: number;
   insights: string[];
   overreachingFlag: boolean;
+  illnessWatch: boolean;
   trends: {
     label: string;
     last7?: number;
@@ -53,9 +54,22 @@ export function buildCoaching(days: DayMetrics[], tonightNeedHours: number): Coa
   // Overreaching: HRV below your normal for 3 days running while strain stays high.
   const last3 = days.slice(-3);
   const hrvLow = last3.length === 3 && last3.every((d) => (d.recovery.components.hrv?.z ?? 0) < -0.75);
-  const highStrain = (avg(days.slice(-7).map((d) => d.strain.strain)) ?? 0) >= 13;
+  const highStrain = (avg(days.slice(-7).map((d) => (d.strain.hasData ? d.strain.strain : undefined))) ?? 0) >= 13;
   const overreachingFlag = hrvLow && highStrain;
   if (overreachingFlag) insights.push('HRV has been suppressed for 3 days under high load. Consider a rest day.');
+
+  // Early-illness pattern: resting HR clearly up AND HRV clearly down (or breathing up) on 2 mornings running.
+  const last2 = days.slice(-2);
+  const illnessWatch =
+    last2.length === 2 &&
+    last2.every((d) => {
+      const c = d.recovery.components;
+      if (!c.rhr) return false;
+      const hrvDown = c.hrv ? c.hrv.z <= -1 : false;
+      const respUp = c.resp ? c.resp.z <= -1 : false;
+      return c.rhr.z <= -1 && (hrvDown || respUp);
+    });
+  if (illnessWatch) insights.push('Resting heart rate is up and HRV is down two mornings in a row. That often shows up before a cold or flu, or after poor sleep, alcohol or heavy training. Consider taking it easy.');
 
   const split = (pick: (d: DayMetrics) => number | undefined) => {
     const v = days.map(pick);
@@ -66,8 +80,8 @@ export function buildCoaching(days: DayMetrics[], tonightNeedHours: number): Coa
     { label: 'HRV', ...split((d) => d.recovery.components.hrv?.value), unit: 'ms', betterWhen: 'higher' },
     { label: 'Resting HR', ...split((d) => d.recovery.components.rhr?.value), unit: 'bpm', betterWhen: 'lower' },
     { label: 'Sleep', ...split((d) => d.sleep?.hoursAsleep), unit: 'h', betterWhen: 'higher' },
-    { label: 'Strain', ...split((d) => d.strain.strain), unit: '', betterWhen: 'higher' },
+    { label: 'Strain', ...split((d) => (d.strain.hasData ? d.strain.strain : undefined)), unit: '', betterWhen: 'higher' },
   ];
 
-  return { headline, targetStrain, tonightSleepHours: tonightNeedHours, insights, overreachingFlag, trends };
+  return { headline, targetStrain, tonightSleepHours: tonightNeedHours, insights, overreachingFlag, illnessWatch, trends };
 }

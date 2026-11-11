@@ -85,6 +85,8 @@ export interface RawHealthData {
   bodyWater: { t: number; kg: number }[];
   boneMass: { t: number; kg: number }[];
   bp: BpReading[];
+  /** Read diagnostics from the platform adapter (not scores). */
+  meta?: { errors: string[]; limitedHistory?: boolean };
 }
 
 export const emptyRaw = (): RawHealthData => ({

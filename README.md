@@ -88,3 +88,33 @@ src/components/ui.tsx    animated rings, bouncy buttons, charts
 src/useVitalis.ts        loading, profile, manual BP / weight storage
 test/run.ts              engine checks incl. BP model gate
 ```
+
+## App icon
+`assets/icon.png` (iOS, full-bleed) and `assets/adaptive-icon.png` (Android foreground, scaled to sit inside the 66% safe circle on `#07163D`) come from the supplied VITALIS logo. The logo also appears on the Connect screen.
+
+## Data check (You tab)
+Shows how many of the last 7 days your tracker actually shared sleep, resting HR, heart-rate stream, HRV, steps, calories, weight and BP, with a tip for anything missing, plus any failed Health Connect reads. If a metric looks empty, look here first: it is usually a tracker or permission setting, not the app.
+
+## Sparse-data behaviour
+Strain shows "--" until heart rate, workouts or steps exist. Charts skip leading empty days and explain themselves when empty. Recovery shows a "still learning you" notice until the baseline has ~14 nights. Health Connect reads that exceed the 30-day limit fall back to 29 days.
+
+## Previewing a sparse phone
+`EXPO_PUBLIC_DEMO=sparse npx expo export --platform web` loads data that mimics a tracker sharing only sleep and resting HR. `TZ=Asia/Dubai npx tsx test/sparse.ts` checks it.
+
+## Long-term biomarkers and habit insights (Trends tab)
+Biomarker card: last 30 days vs the 30 before for HRV, resting HR, sleep, VO2max, weight and systolic BP, marked better/worse/steady only past a minimum change. Habit card: yesterday's strain, steps, sleep and bedtime against this morning's HRV, resting HR and recovery. A pattern shows only with 21+ paired days, |r| >= 0.3 and t >= 2 (half the days counted, since neighbouring days are correlated). These are associations, not proof of cause.
+
+## Sync
+The app re-reads Health Connect whenever it returns to the foreground. Data still only appears once your tracker's own app has synced into Health Connect; Data check shows how old the newest record is.
+
+## v0.2 additions
+- **Daily check-in + habit journal** (Today tab): how you feel plus 10 habit toggles. After 14 logged days, Trends shows which habits go with higher/lower next-morning HRV, resting HR and recovery (difference of means, discounted t-test; null data produced 0 false claims in 20 runs). It also tells you whether recovery matches how you feel.
+- **Blood tests** (Body tab): LDL, HDL, triglycerides, total cholesterol, HbA1c, fasting glucose, vitamin D, ferritin, hs-CRP, TSH with generic ranges, change since last, and a "mention to your clinician" note. Not diagnostic.
+- **Illness watch:** resting HR up and HRV (or breathing) worse two mornings running.
+- **Notifications + background sync:** morning summary, bedtime reminder (from your usual wake time and tonight's need), weekly BP reminder. Android needs the Health Connect background-read permission for refresh while closed; the OS schedules the task, so timing is best-effort.
+- **Error reporting:** error boundary, on-phone error log, optional opt-in Sentry (`EXPO_PUBLIC_SENTRY_DSN`), scrubbed of health data.
+- **Polish:** onboarding, tap-to-explain on rings, settings, delete-all-data, cached last result with "updated X ago", skeleton loading.
+- **Play Store:** see `docs/PLAY_STORE.md`, `docs/PRIVACY_POLICY.md`, `eas.json`, `scripts/make-upload-key.sh`. Package id is `app.vitalis.tracker`; change it before first publish.
+
+Not done: SpO2 / skin temperature (would add permissions to justify), menstrual-cycle awareness, per-sport strain, light theme, translations.
+Tests: `npm test`, plus `npx tsx test/sparse.ts`, `test/journal.ts`, `test/notify.ts` (set `TZ=Asia/Dubai`).

@@ -9,6 +9,9 @@ import { bpPrompt, BpPrompt, BpSummary, summarizeBp } from './bp';
 import { BpModelResult, evaluateBpModel, toModelDays } from './bpmodel';
 import { BodyCompResult, computeBodyComp } from './bodycomp';
 import { Badge, computeBadges } from './badges';
+import { InsightsResult, computeInsights } from './insights';
+import { JournalEntry, JournalInsights, computeJournalInsights } from './journal';
+import { LabResult, LabSummary, summarizeLabs } from './labs';
 import { defined } from './util';
 
 export interface DayMetrics {
@@ -28,10 +31,18 @@ export interface Analysis {
   bp: { summary: BpSummary; prompt: BpPrompt; model: BpModelResult };
   bodyComp: BodyCompResult;
   badges: Badge[];
+  insights: InsightsResult;
+  journal: JournalInsights;
+  labs: LabSummary[];
+}
+
+export interface Extras {
+  journal?: JournalEntry[];
+  labs?: LabResult[];
 }
 
 /** Run the whole pipeline over a chronological list of days. The last day is "today". */
-export function analyze(days: DailyData[], profile: UserProfile, now = Date.now()): Analysis {
+export function analyze(days: DailyData[], profile: UserProfile, now = Date.now(), extras: Extras = {}): Analysis {
   if (!days.length) throw new Error('analyze() needs at least one day');
 
   // Latest measured weight and body fat win over what was typed in at setup.
@@ -54,12 +65,12 @@ export function analyze(days: DailyData[], profile: UserProfile, now = Date.now(
     const sleep = computeSleep(day, history, effective, prevStrain);
     const recovery = computeRecovery(day, history, sleep?.performance);
     metrics.push({ date: day.date, strain, sleep, recovery });
-    prevStrain = strain.strain;
+    if (strain.hasData) prevStrain = strain.strain;
   }
 
   const today = metrics[metrics.length - 1];
   const recentHours = days.filter((d) => d.sleep).map((d) => summarizeSession(d.sleep!).asleepMin / 60);
-  const tonightNeedHours = sleepNeed(effective, recentHours, today.strain.strain);
+  const tonightNeedHours = sleepNeed(effective, recentHours, today.strain.hasData ? today.strain.strain : 6);
 
   const bpSummary = summarizeBp(days, now);
 
@@ -77,5 +88,8 @@ export function analyze(days: DailyData[], profile: UserProfile, now = Date.now(
     },
     bodyComp,
     badges: computeBadges(days, metrics, now),
+    insights: computeInsights(days, metrics),
+    journal: computeJournalInsights(days, metrics, extras.journal ?? []),
+    labs: summarizeLabs(extras.labs ?? [], profile.sex),
   };
 }

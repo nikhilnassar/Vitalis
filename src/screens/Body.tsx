@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { BigButton, Card, Field, Note, Pill, Row, Spark, Stat } from '../components/ui';
 import { Analysis } from '../metrics';
+import { Labs } from './Labs';
 import { colors } from '../theme';
 import { UserProfile } from '../types';
 
-export function Body({ a, profile, onAddWeight }: { a: Analysis; profile: UserProfile; onAddWeight: (kg: number, bf?: number) => Promise<void> }) {
+export function Body({ a, profile, onAddWeight, onAddLab, onDeleteLab }: { a: Analysis; profile: UserProfile; onAddWeight: (kg: number, bf?: number) => Promise<void>; onAddLab: (key: string, v: number) => Promise<void>; onDeleteLab: (id: string) => Promise<void> }) {
   const { bioAge, metabolic: m, bodyComp: bc } = a;
   const off = bioAge.offsetYears;
   const [open, setOpen] = useState(false);
@@ -35,7 +36,7 @@ export function Body({ a, profile, onAddWeight }: { a: Analysis; profile: UserPr
                 <Pill text={`${trendEmoji} ${bc.kgPerWeek == null ? 'need more weigh-ins' : `${bc.kgPerWeek > 0 ? '+' : ''}${bc.kgPerWeek} kg / week`}`} color={colors.sky} />
               </View>
             </View>
-            <Spark values={bc.series.map((s) => s.kg)} color={colors.sky} />
+            <Spark values={bc.series.map((s) => s.kg)} color={colors.sky} height={56} empty="Add a few weigh-ins to see your trend 📈" />
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               <Stat label="7-day average" value={bc.avg7Kg ?? '--'} unit="kg" />
               {bc.latest.bmi ? <Stat label="BMI" value={bc.latest.bmi} /> : null}
@@ -67,6 +68,8 @@ export function Body({ a, profile, onAddWeight }: { a: Analysis; profile: UserPr
           <BigButton label="Add a weigh-in" emoji="➕" color={colors.sky} onPress={() => setOpen(true)} />
         )}
       </Card>
+
+      <Labs summaries={a.labs} sex={profile.sex} onAdd={onAddLab} onDelete={onDeleteLab} />
 
       <Card title="Biological age (estimate)" emoji="🧬" delay={60}>
         {bioAge.bioAge == null ? (

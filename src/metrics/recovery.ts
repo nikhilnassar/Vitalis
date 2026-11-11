@@ -16,6 +16,7 @@ export interface RecoveryResult {
   status: 'ok' | 'calibrating' | 'no-data';
   components: { hrv?: Component; rhr?: Component; resp?: Component; sleep?: number };
   notes: string[];
+  baselineDays?: number; // nights behind the baseline; scores are shaky below ~14
 }
 
 export const bandFor = (score: number): RecoveryBand => (score >= 67 ? 'green' : score >= 34 ? 'yellow' : 'red');
@@ -99,5 +100,6 @@ export function computeRecovery(
     status: 'ok',
     components: { hrv, rhr, resp, sleep: sleepPerformance },
     notes,
+    baselineDays: Math.max(hrv ? hrvB!.n : 0, rhr ? rhrB!.n : 0),
   };
 }

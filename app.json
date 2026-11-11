@@ -5,11 +5,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/icon.png",
     "ios": {
-      "bundleIdentifier": "com.example.vitalis",
+      "bundleIdentifier": "app.vitalis.tracker",
       "supportsTablet": false,
-      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Vitalis reads your heart rate, HRV, sleep, activity and body data from Apple Health to calculate recovery, strain and sleep scores on your phone.",
         "NSHealthUpdateUsageDescription": "Vitalis does not write to Apple Health."
@@ -17,14 +15,11 @@
       "entitlements": {
         "com.apple.developer.healthkit": true,
         "com.apple.developer.healthkit.background-delivery": false
-      }
+      },
+      "buildNumber": "1"
     },
     "android": {
-      "package": "com.example.vitalis",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#13233c"
-      },
+      "package": "app.vitalis.tracker",
       "permissions": [
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_HEART_RATE_VARIABILITY",
@@ -42,7 +37,20 @@
         "android.permission.health.READ_LEAN_BODY_MASS",
         "android.permission.health.READ_BODY_WATER_MASS",
         "android.permission.health.READ_BONE_MASS",
-        "android.permission.health.READ_HEALTH_DATA_HISTORY"
+        "android.permission.health.READ_HEALTH_DATA_HISTORY",
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#07163D"
+      },
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_PHONE_STATE"
       ]
     },
     "plugins": [
@@ -56,12 +64,23 @@
             "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#B6F23C"
+        }
+      ],
+      "expo-background-task"
     ],
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
     "extra": {
-      "eas": {
-        "projectId": "9dc6a626-2a98-41f8-be3d-ba0c72b205af"
-      }
+      "privacyPolicyUrl": "https://YOUR-DOMAIN/privacy  (replace before submitting)"
     }
   }
 }

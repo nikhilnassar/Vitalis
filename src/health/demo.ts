@@ -136,3 +136,25 @@ export function demoRaw(now = Date.now(), days = 90, seed = 7): RawHealthData {
   raw.vo2max.push({ t: now - 20 * 24 * HOUR, value: 46.5 });
   return raw;
 }
+
+/**
+ * What a brand-new connection often looks like: a handful of nights, resting heart rate, no HRV, no steps,
+ * no heart-rate stream, one weigh-in. Used to check the app stays honest and readable with thin data.
+ */
+export function sparseRaw(now = Date.now()): RawHealthData {
+  const raw = demoRaw(now, 6, 11);
+  raw.hrv = [];
+  raw.steps = [];
+  raw.activeEnergy = [];
+  raw.heartRate = [];
+  raw.workouts = [];
+  raw.bp = [];
+  raw.bodyFat = [];
+  raw.leanMass = [];
+  raw.bodyWater = [];
+  raw.boneMass = [];
+  raw.vo2max = [];
+  raw.weight = raw.weight.slice(-1).map((w) => ({ ...w, kg: 119 }));
+  raw.profile = { age: 32, sex: 'male', heightCm: 179, weightKg: 119 };
+  return raw;
+}

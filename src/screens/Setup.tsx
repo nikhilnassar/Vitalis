@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { BigButton, Chip, Field, Pop } from '../components/ui';
 import { platformName } from '../health';
 import { colors } from '../theme';
@@ -9,9 +9,8 @@ export function Connect({ onPlatform, onDemo, error, loading }: { onPlatform: ()
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
       <Pop>
-        <Text style={{ fontSize: 64 }}>🫀⚡🌙</Text>
-        <Text style={{ color: colors.text, fontSize: 40, fontWeight: '900', marginTop: 8 }}>Vitalis</Text>
-        <Text style={{ color: colors.sub, fontSize: 16, lineHeight: 24, marginTop: 10 }}>
+        <Image source={require('../../assets/icon.png')} style={{ width: 168, height: 168, borderRadius: 38, alignSelf: 'center' }} />
+        <Text style={{ color: colors.sub, fontSize: 16, lineHeight: 24, marginTop: 22, textAlign: 'center' }}>
           Recovery, strain, sleep and body insights from the tracker you already own. All crunched on your phone: no account, no subscription. 🎉
         </Text>
       </Pop>

@@ -36,10 +36,11 @@ export function Pop({ children, delay = 0, style }: { children: React.ReactNode;
 }
 
 /** Pressable that squishes when you touch it. */
-export function Bounce({ onPress, children, style, disabled }: { onPress?: () => void; children: React.ReactNode; style?: ViewStyle | ViewStyle[]; disabled?: boolean }) {
+export function Bounce({ onPress, children, style, outerStyle, disabled }: { onPress?: () => void; children: React.ReactNode; style?: ViewStyle | ViewStyle[]; outerStyle?: ViewStyle; disabled?: boolean }) {
   const s = useRef(new Animated.Value(1)).current;
   return (
     <Pressable
+      style={outerStyle}
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => Animated.spring(s, { toValue: 0.94, useNativeDriver: true, speed: 40 }).start()}
@@ -50,10 +51,10 @@ export function Bounce({ onPress, children, style, disabled }: { onPress?: () =>
   );
 }
 
-export function BigButton({ label, onPress, color = colors.lime, disabled, emoji }: { label: string; onPress?: () => void; color?: string; disabled?: boolean; emoji?: string }) {
+export function BigButton({ label, onPress, color = colors.lime, textColor = colors.ink, disabled, emoji }: { label: string; onPress?: () => void; color?: string; textColor?: string; disabled?: boolean; emoji?: string }) {
   return (
     <Bounce onPress={onPress} disabled={disabled} style={{ backgroundColor: color, borderRadius: radius.button, paddingVertical: 15, alignItems: 'center', marginTop: space.md }}>
-      <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 16 }}>
+      <Text style={{ color: textColor, fontWeight: '800', fontSize: 16 }}>
         {emoji ? `${emoji}  ` : ''}
         {label}
       </Text>
@@ -63,7 +64,7 @@ export function BigButton({ label, onPress, color = colors.lime, disabled, emoji
 
 export function Chip({ label, selected, onPress, color = colors.lime }: { label: string; selected: boolean; onPress: () => void; color?: string }) {
   return (
-    <Bounce onPress={onPress} style={{ flex: 1, paddingVertical: 13, borderRadius: radius.button, alignItems: 'center', backgroundColor: selected ? color : colors.cardAlt, borderWidth: 1.5, borderColor: selected ? color : colors.border }}>
+    <Bounce onPress={onPress} outerStyle={{ flex: 1 }} style={{ paddingVertical: 13, borderRadius: radius.button, alignItems: 'center', backgroundColor: selected ? color : colors.cardAlt, borderWidth: 1.5, borderColor: selected ? color : colors.border }}>
       <Text style={{ color: selected ? colors.ink : colors.text, fontWeight: '700' }}>{label}</Text>
     </Bounce>
   );
@@ -243,24 +244,43 @@ export function ProgressBar({ value, max, color = colors.lime, height = 14 }: { 
   );
 }
 
+const EMPTY_DEFAULT = 'Collecting data. Check back in a few days 🌱';
+
+function Empty({ text, height }: { text: string; height: number }) {
+  return (
+    <View style={{ height, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 }}>
+      <Text style={{ color: colors.sub, textAlign: 'center', fontSize: 13, lineHeight: 19 }}>{text}</Text>
+    </View>
+  );
+}
+
+/** Drop the leading days that have no data so the chart fills its width with what exists. */
+const trimLead = (v: (number | null | undefined)[]) => {
+  const i = v.findIndex((x) => x != null);
+  return i < 0 ? [] : v.slice(i);
+};
+
 export function Bars({
   values,
   colorFor,
   max,
   height = 90,
+  empty = EMPTY_DEFAULT,
 }: {
   values: (number | null | undefined)[];
   colorFor: (v: number) => string;
   max: number;
   height?: number;
+  empty?: string;
 }) {
   const width = useChartWidth();
-  const n = Math.max(values.length, 1);
+  const vs = trimLead(values);
+  if (vs.filter((v) => v != null).length < 2) return <Empty text={empty} height={height} />;
   const gap = 3;
-  const bw = Math.max(3, (width - gap * (n - 1)) / n);
+  const bw = Math.min(26, Math.max(3, (width - gap * (vs.length - 1)) / vs.length));
   return (
     <Svg width={width} height={height}>
-      {values.map((v, i) =>
+      {vs.map((v, i) =>
         v == null ? null : (
           <Rect key={i} x={i * (bw + gap)} y={height - Math.max(3, (v / max) * height)} width={bw} height={Math.max(3, (v / max) * height)} rx={Math.min(5, bw / 2)} fill={colorFor(v)} />
         ),
@@ -275,19 +295,21 @@ export interface Line {
 }
 
 /** One or more lines on a shared scale, with a dot on the latest point. */
-export function Lines({ lines, height = 80 }: { lines: Line[]; height?: number }) {
+export function Lines({ lines, height = 80, empty = EMPTY_DEFAULT }: { lines: Line[]; height?: number; empty?: string }) {
   const width = useChartWidth();
-  const all = lines.flatMap((l) => l.values).filter((v): v is number => v != null);
-  if (all.length < 2) return <View style={{ height }} />;
+  const lead = Math.min(...lines.map((l) => (l.values.findIndex((x) => x != null) < 0 ? Infinity : l.values.findIndex((x) => x != null))));
+  const trimmed = lines.map((l) => ({ ...l, values: Number.isFinite(lead) ? l.values.slice(lead) : [] }));
+  const all = trimmed.flatMap((l) => l.values).filter((v): v is number => v != null);
+  if (all.length < 2) return <Empty text={empty} height={height} />;
   const lo = Math.min(...all);
   const hi = Math.max(...all);
   const span = hi - lo || 1;
-  const len = Math.max(...lines.map((l) => l.values.length));
+  const len = Math.max(...trimmed.map((l) => l.values.length));
   const step = width / Math.max(len - 1, 1);
   const y = (v: number) => height - 8 - ((v - lo) / span) * (height - 16);
   return (
     <Svg width={width} height={height}>
-      {lines.map((l, li) => {
+      {trimmed.map((l, li) => {
         const pts = l.values.map((v, i) => (v == null ? null : { x: i * step, y: y(v) })).filter((p): p is { x: number; y: number } => p !== null);
         if (pts.length < 2) return null;
         const last = pts[pts.length - 1];
@@ -302,7 +324,7 @@ export function Lines({ lines, height = 80 }: { lines: Line[]; height?: number }
   );
 }
 
-export const Spark = ({ values, color, height = 64 }: { values: (number | null | undefined)[]; color: string; height?: number }) => <Lines lines={[{ values, color }]} height={height} />;
+export const Spark = ({ values, color, height = 64, empty }: { values: (number | null | undefined)[]; color: string; height?: number; empty?: string }) => <Lines lines={[{ values, color }]} height={height} empty={empty} />;
 
 export function Pill({ text, color }: { text: string; color: string }) {
   return (

@@ -1,0 +1,18 @@
+import { sparseRaw } from '../src/health/demo';
+import { assemble, coverage } from '../src/health/assemble';
+import { analyze } from '../src/metrics';
+const now = new Date('2026-11-09T14:00:00').getTime();
+const raw = sparseRaw(now);
+const prof = { age: 32, sex: 'male', heightCm: 179, weightKg: 119 } as any;
+const days = assemble(raw, prof, 90, now);
+const a = analyze(days, prof, now);
+const ok = (c: boolean, m: string) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
+ok(a.today.strain.hasData === false, 'no strain data -> hasData false');
+ok(a.today.recovery.status === 'ok' && (a.today.recovery.baselineDays ?? 99) < 14, 'early data: status=' + a.today.recovery.status + ' baselineDays=' + a.today.recovery.baselineDays);
+const cov = coverage(raw, 'Health Connect', now);
+ok(cov.find((c) => c.key === 'hr')!.days === 0, 'coverage flags missing heart-rate stream');
+ok(cov.find((c) => c.key === 'sleep')!.days > 0, 'coverage sees sleep');
+const full = (() => { const { demoRaw } = require('../src/health/demo'); const r = demoRaw(now, 90, 7); const d = assemble(r, prof, 90, now); return analyze(d, prof, now); })();
+console.log('insights:', full.insights.trends.map((t: any) => `${t.key}:${t.verdict}`).join(' '), '|', full.insights.habits.map((h: any) => h.sentence));
+ok(full.insights.habitsReady, 'habits ready with 90 days');
+ok(a.insights.habitsReady === false, 'sparse data shows no habit claims');

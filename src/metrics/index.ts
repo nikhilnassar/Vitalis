@@ -10,3 +10,6 @@ export * from './bp';
 export * from './bpmodel';
 export * from './bodycomp';
 export * from './badges';
+export * from './insights';
+export * from './journal';
+export * from './labs';
