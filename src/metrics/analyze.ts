@@ -12,7 +12,10 @@ import { Badge, computeBadges } from './badges';
 import { InsightsResult, computeInsights } from './insights';
 import { JournalEntry, JournalInsights, computeJournalInsights } from './journal';
 import { LabResult, LabSummary, summarizeLabs } from './labs';
-import { defined } from './util';
+import { SleepBalance, computeSleepBalance } from './sleepdebt';
+import { VitalsResult, computeVitals } from './vitals';
+import { Experiment, ExperimentResult, computeExperiments } from './experiments';
+import { dayKey, defined } from './util';
 
 export interface DayMetrics {
   date: string;
@@ -34,11 +37,15 @@ export interface Analysis {
   insights: InsightsResult;
   journal: JournalInsights;
   labs: LabSummary[];
+  sleepBalance: SleepBalance;
+  vitals: VitalsResult;
+  experiments: ExperimentResult[];
 }
 
 export interface Extras {
   journal?: JournalEntry[];
   labs?: LabResult[];
+  experiments?: Experiment[];
 }
 
 /** Run the whole pipeline over a chronological list of days. The last day is "today". */
@@ -91,5 +98,8 @@ export function analyze(days: DailyData[], profile: UserProfile, now = Date.now(
     insights: computeInsights(days, metrics),
     journal: computeJournalInsights(days, metrics, extras.journal ?? []),
     labs: summarizeLabs(extras.labs ?? [], profile.sex),
+    sleepBalance: computeSleepBalance(days, effective.sleepNeedHours ?? 8, tonightNeedHours),
+    vitals: computeVitals(days),
+    experiments: computeExperiments(extras.experiments ?? [], days, metrics, extras.journal ?? [], days[days.length - 1].date),
   };
 }

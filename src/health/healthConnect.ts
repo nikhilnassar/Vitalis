@@ -4,6 +4,7 @@
 import {
   initialize,
   getSdkStatus,
+  getGrantedPermissions,
   requestPermission,
   readRecords,
   SdkAvailabilityStatus,
@@ -27,6 +28,8 @@ const TYPES = [
   'LeanBodyMass',
   'BodyWaterMass',
   'BoneMass',
+  'OxygenSaturation',
+  'BodyTemperature',
 ] as const;
 
 export async function requestAccess(): Promise<void> {
@@ -35,6 +38,15 @@ export async function requestAccess(): Promise<void> {
     throw new Error('Health Connect is not installed or needs an update (Play Store).');
   }
   if (!(await initialize())) throw new Error('Could not initialise Health Connect.');
+  // Only open the permission screen when something is actually missing. Opening it needlessly made the app
+  // pause/resume in a loop and Android killed it.
+  let granted: any[] = [];
+  try {
+    granted = (await getGrantedPermissions()) as any[];
+  } catch {}
+  const have = new Set(granted.map((g) => g.recordType));
+  const missing = TYPES.filter((t) => !have.has(t));
+  if (missing.length === 0) return;
   // The history permission lets us read beyond 30 days (BP readings are sparse, so the model needs a long window).
   await requestPermission([
     ...TYPES.map((recordType) => ({ accessType: 'read', recordType })),
@@ -130,9 +142,11 @@ export async function readRaw(days = 90): Promise<RawHealthData> {
       'LeanBodyMass',
       'BodyWaterMass',
       'BoneMass',
+      'OxygenSaturation',
+      'BodyTemperature',
     ].map((t) => read(t, start, end, fallbackStart)),
   );
-  const [hr, hrv, rhr, resp, sleep, steps, energy, vo2, weight, fat, height, ex, bp, lean, water, bone] = results.map((r) => r.records);
+  const [hr, hrv, rhr, resp, sleep, steps, energy, vo2, weight, fat, height, ex, bp, lean, water, bone, oxy, temp] = results.map((r) => r.records);
   raw.meta = {
     errors: results.map((r) => r.error).filter((e): e is string => !!e),
     limitedHistory: results.some((r) => r.limited),
@@ -142,6 +156,8 @@ export async function readRaw(days = 90): Promise<RawHealthData> {
   raw.hrv = hrv.map((r) => ({ t: ts(r.time), ms: r.heartRateVariabilityMillis }));
   raw.restingHr = rhr.map((r) => ({ t: ts(r.time), bpm: r.beatsPerMinute }));
   raw.respRate = resp.map((r) => ({ t: ts(r.time), rpm: r.rate }));
+  raw.spo2 = oxy.map((r) => ({ t: ts(r.time), pct: r.percentage })).filter((x) => typeof x.pct === 'number');
+  raw.bodyTemp = temp.map((r) => ({ t: ts(r.time), c: r.temperature?.inCelsius })).filter((x) => typeof x.c === 'number');
 
   for (const s of sleep) {
     const stages = s.stages ?? [];

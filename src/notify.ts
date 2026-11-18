@@ -10,8 +10,10 @@ const N = () => require('expo-notifications') as typeof import('expo-notificatio
 const IDS = { bedtime: 'vitalis-bedtime', bp: 'vitalis-bp-weekly' };
 const CHANNEL = 'vitalis';
 
+let ready = false;
 export function setupNotifications() {
-  if (!supported) return;
+  if (!supported || ready) return;
+  ready = true;
   const n = N();
   n.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
   if (Platform.OS === 'android') n.setNotificationChannelAsync(CHANNEL, { name: 'Daily insights', importance: n.AndroidImportance.DEFAULT }).catch(() => {});
@@ -19,6 +21,7 @@ export function setupNotifications() {
 
 export async function ensurePermission(): Promise<boolean> {
   if (!supported) return false;
+  setupNotifications();
   const n = N();
   const cur = await n.getPermissionsAsync();
   if (cur.granted) return true;
@@ -30,6 +33,7 @@ const todayStamp = () => new Date().toDateString();
 /** Apply the person's settings to the schedule and, if it is morning and not yet sent, deliver today's summary. */
 export async function syncNotifications(a: Analysis, s: Settings, opts: { allowMorning: boolean }) {
   if (!supported) return;
+  setupNotifications();
   const n = N();
   const plan = planNotifications(a);
 

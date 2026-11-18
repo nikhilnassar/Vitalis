@@ -10,6 +10,7 @@ export const KEYS = {
   cache: 'vitalis.cache.v1',
   errors: 'vitalis.errors.v1',
   onboarded: 'vitalis.onboarded.v1',
+  experiments: 'vitalis.experiments.v1',
   lastNotified: 'vitalis.lastNotified.v1',
 } as const;
 

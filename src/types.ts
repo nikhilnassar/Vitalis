@@ -53,6 +53,9 @@ export interface DailyData {
   hrv?: number; // overnight mean, ms
   rhr?: number; // resting heart rate, bpm
   respRate?: number; // breaths per minute, overnight
+  spo2?: number; // mean overnight blood oxygen, %
+  spo2Min?: number; // lowest overnight reading, %
+  tempC?: number; // mean overnight body temperature, °C
   hrSamples: HrSample[];
   steps?: number;
   activeKcal?: number;
@@ -74,6 +77,8 @@ export interface RawHealthData {
   hrv: { t: number; ms: number }[];
   restingHr: { t: number; bpm: number }[];
   respRate: { t: number; rpm: number }[];
+  spo2: { t: number; pct: number }[];
+  bodyTemp: { t: number; c: number }[];
   sleep: SleepSegment[];
   steps: { start: number; end: number; count: number }[];
   activeEnergy: { start: number; end: number; kcal: number }[];
@@ -95,6 +100,8 @@ export const emptyRaw = (): RawHealthData => ({
   hrv: [],
   restingHr: [],
   respRate: [],
+  spo2: [],
+  bodyTemp: [],
   sleep: [],
   steps: [],
   activeEnergy: [],

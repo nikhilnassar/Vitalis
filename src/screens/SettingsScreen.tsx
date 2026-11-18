@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { createBackup, restoreBackup } from '../backup';
 import Constants from 'expo-constants';
 import { BigButton, Card, Note } from '../components/ui';
 import { clearErrorLog, initErrorReporting, LoggedError, readErrorLog } from '../errors';
@@ -24,7 +25,10 @@ function Toggle({ label, sub, on, onChange }: { label: string; sub: string; on: 
   );
 }
 
-export function SettingsScreen({ onChanged, onDeleteAll }: { onChanged: (s: Settings) => void; onDeleteAll: () => void }) {
+export function SettingsScreen({ onChanged, onDeleteAll, onRestored }: { onChanged: (s: Settings) => void; onDeleteAll: () => void; onRestored: () => void }) {
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
+  const [backupMsg, setBackupMsg] = useState('');
   const [s, setS] = useState<Settings>(DEFAULT_SETTINGS);
   const [log, setLog] = useState<LoggedError[]>([]);
   const [showLog, setShowLog] = useState(false);
@@ -91,6 +95,27 @@ export function SettingsScreen({ onChanged, onDeleteAll }: { onChanged: (s: Sett
             {log.length ? <BigButton label="Clear log" color={colors.sky} onPress={async () => { await clearErrorLog(); setLog([]); }} /> : null}
           </View>
         ) : null}
+      </Card>
+
+      <Card title="Backup and restore" emoji="💾" delay={60}>
+        <Text style={{ color: colors.sub, lineHeight: 20 }}>Save your profile, check-ins, blood tests, manual readings, experiments and settings as text. Keep it in notes or email it to yourself, and paste it back on a new phone.</Text>
+        <BigButton label="Save a backup" emoji="📤" color={colors.sky} onPress={async () => { try { await Share.share({ message: await createBackup(), title: 'Vitalis backup' }); } catch {} }} />
+        <BigButton label={pasting ? 'Cancel restore' : 'Restore from a backup'} emoji="📥" color={colors.cardAlt} textColor={colors.text} onPress={() => { setPasting((v) => !v); setBackupMsg(''); }} />
+        {pasting ? (
+          <View style={{ marginTop: 10 }}>
+            <TextInput value={pasted} onChangeText={setPasted} multiline placeholder="Paste your backup text here" placeholderTextColor={colors.sub} style={{ color: colors.text, backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, minHeight: 90, maxHeight: 160 }} />
+            <BigButton
+              label="Restore"
+              onPress={async () => {
+                const r = await restoreBackup(pasted);
+                if (r.ok) { setBackupMsg(`Restored: ${r.restored.join(', ')}.`); setPasted(''); setPasting(false); onRestored(); }
+                else setBackupMsg(r.error ?? 'Could not restore.');
+              }}
+            />
+          </View>
+        ) : null}
+        {backupMsg ? <Text style={{ color: colors.sun, marginTop: 8 }}>{backupMsg}</Text> : null}
+        <Note>Restoring replaces what is on this phone for each section in the backup. Health data itself is not included; it is read again from your phone.</Note>
       </Card>
 
       <Card title="Your data" emoji="🗑️" delay={80}>

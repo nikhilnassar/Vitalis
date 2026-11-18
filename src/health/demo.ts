@@ -67,6 +67,8 @@ export function demoRaw(now = Date.now(), days = 90, seed = 7): RawHealthData {
     const rhr = 53 + stress * 4 + 1.3 * lat + (r() - 0.5) * 2;
     for (let k = 0; k < 6; k++) raw.hrv.push({ t: bed + (k + 1) * hours * 0.15 * HOUR, ms: hrv + (r() - 0.5) * 6 });
     raw.respRate.push({ t: bed + 3 * HOUR, rpm: 14.2 + stress * 0.8 + 0.2 * lat + (r() - 0.5) * 0.5 });
+    raw.spo2.push({ t: bed + 3 * HOUR, pct: Math.round((96.4 - stress * 0.8 + (r() - 0.5) * 1.2) * 10) / 10 });
+    raw.bodyTemp.push({ t: bed + 4 * HOUR, c: Math.round((36.5 + stress * 0.35 + (r() - 0.5) * 0.2) * 100) / 100 });
     raw.restingHr.push({ t: wake + 2 * HOUR, bpm: Math.round(rhr) });
     for (let m = bed; m < wake; m += 10 * MIN) raw.heartRate.push({ t: m, bpm: Math.round(rhr + 2 + r() * 6) });
 

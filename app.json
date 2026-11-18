@@ -37,8 +37,11 @@
         "android.permission.health.READ_LEAN_BODY_MASS",
         "android.permission.health.READ_BODY_WATER_MASS",
         "android.permission.health.READ_BONE_MASS",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_BODY_TEMPERATURE",
         "android.permission.health.READ_HEALTH_DATA_HISTORY",
-        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -61,7 +64,11 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.room.** { *; }\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.startup.** { *; }",
+            "enableMinifyInReleaseBuilds": false
           }
         }
       ],
@@ -80,7 +87,10 @@
       "bundler": "metro"
     },
     "extra": {
-      "privacyPolicyUrl": "https://YOUR-DOMAIN/privacy  (replace before submitting)"
+      "privacyPolicyUrl": "https://YOUR-DOMAIN/privacy  (replace before submitting)",
+      "eas": {
+        "projectId": "9dc6a626-2a98-41f8-be3d-ba0c72b205af"
+      }
     }
   }
 }

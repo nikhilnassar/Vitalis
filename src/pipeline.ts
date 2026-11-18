@@ -1,6 +1,6 @@
 import { assemble, coverage, CoverageItem, resolveProfile } from './health/assemble';
 import { platformName, Source } from './health';
-import { Analysis, JournalEntry, LabResult, analyze } from './metrics';
+import { Analysis, Experiment, JournalEntry, LabResult, analyze } from './metrics';
 import { KEYS, readJson } from './storage';
 import { BpReading, RawHealthData, UserProfile } from './types';
 
@@ -30,6 +30,7 @@ export interface Built {
   manual: Manual;
   journal: JournalEntry[];
   labs: LabResult[];
+  experiments: Experiment[];
   profile?: UserProfile;
   analysis?: Analysis;
   coverage?: CoverageItem[];
@@ -41,8 +42,9 @@ export async function build(data: RawHealthData, source: Source): Promise<Built>
   const manual = await readJson<Manual>(KEYS.manual, { bp: [], weight: [] });
   const journal = await readJson<JournalEntry[]>(KEYS.journal, []);
   const labs = await readJson<LabResult[]>(KEYS.labs, []);
+  const experiments = await readJson<Experiment[]>(KEYS.experiments, []);
   const profile = resolveProfile(stored, data.profile);
-  if (!profile) return { needsProfile: true, platformProfile: { ...data.profile, ...stored }, manual, journal, labs };
+  if (!profile) return { needsProfile: true, platformProfile: { ...data.profile, ...stored }, manual, journal, labs, experiments };
   const merged = mergeManual(data, manual);
   const days = assemble(merged, profile);
   return {
@@ -51,8 +53,9 @@ export async function build(data: RawHealthData, source: Source): Promise<Built>
     manual,
     journal,
     labs,
+    experiments,
     profile,
-    analysis: analyze(days, profile, Date.now(), { journal, labs }),
+    analysis: analyze(days, profile, Date.now(), { journal, labs, experiments }),
     coverage: coverage(merged, source === 'demo' ? 'the demo' : platformName),
   };
 }

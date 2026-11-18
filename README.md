@@ -118,3 +118,9 @@ The app re-reads Health Connect whenever it returns to the foreground. Data stil
 
 Not done: SpO2 / skin temperature (would add permissions to justify), menstrual-cycle awareness, per-sport strain, light theme, translations.
 Tests: `npm test`, plus `npx tsx test/sparse.ts`, `test/journal.ts`, `test/notify.ts` (set `TZ=Asia/Dubai`).
+
+## New in this version
+- Sleep debt (7 nights), bedtime suggestion and weekend/weekday shift on the Sleep tab.
+- Overnight blood oxygen and body temperature (Health Connect, Android) on the Trends tab.
+- Personal experiments: 14-day avoid/do tests compared with the 14 mornings before.
+- Weekly report (plain text share) and backup/restore (You tab).

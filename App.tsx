@@ -16,7 +16,7 @@ import { Trends } from './src/screens/Trends';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { Skeleton } from './src/components/Skeleton';
 import { initErrorReporting } from './src/errors';
-import { setupNotifications, syncNotifications } from './src/notify';
+import { syncNotifications } from './src/notify';
 import { setBackgroundEnabled } from './src/background';
 import { Onboarding } from './src/screens/Onboarding';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -34,12 +34,11 @@ export default function App() {
 }
 
 function AppInner() {
-  const { state, load, saveProfile, addBp, addWeight, deleteBp, toggleHabit, setFeel, addLab, deleteLab, deleteAll, disconnect, refresh } = useVitalis();
+  const { state, load, saveProfile, addBp, addWeight, deleteBp, toggleHabit, setFeel, addLab, deleteLab, startExperiment, stopExperiment, afterRestore, deleteAll, disconnect, refresh } = useVitalis();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(KEYS.onboarded).then((v) => setOnboarded(v === '1')).catch(() => setOnboarded(true));
-    setupNotifications();
     loadSettings().then((s) => initErrorReporting(s.crashReports));
   }, []);
 
@@ -48,8 +47,9 @@ function AppInner() {
     if (!state.analysis || state.stale || state.source !== 'platform') return;
     loadSettings().then(async (s) => {
       const any = s.morningSummary || s.bedtimeReminder || s.bpReminder;
-      await setBackgroundEnabled(any);
-      if (any) await syncNotifications(state.analysis!, s, { allowMorning: true });
+      if (!any) return;
+      await setBackgroundEnabled(true);
+      await syncNotifications(state.analysis!, s, { allowMorning: true });
     }).catch(() => {});
   }, [state.analysis, state.stale, state.source]);
 
@@ -123,14 +123,14 @@ function AppInner() {
           ) : null}
           {tab === 'Today' && <Today a={a} go={setTab} todayEntry={state.journal?.find((e) => e.date === todayKey())} onFeel={(v) => setFeel(todayKey(), v)} onHabit={(id) => toggleHabit(todayKey(), id)} updatedAt={state.updatedAt} stale={state.stale} />}
           {tab === 'Sleep' && <SleepScreen a={a} />}
-          {tab === 'Trends' && <Trends a={a} />}
+          {tab === 'Trends' && <Trends a={a} onStartExperiment={startExperiment} onStopExperiment={stopExperiment} />}
           {tab === 'Body' && <Body a={a} profile={state.profile} onAddWeight={addWeight} onAddLab={addLab} onDeleteLab={deleteLab} />}
           {tab === 'BP' && <Bp a={a} onAdd={addBp} onDelete={deleteBp} />}
           {tab === 'You' && (
             <View>
               {state.coverage ? <DataCheck items={state.coverage} errors={state.readErrors} limited={state.limitedHistory} /> : null}
               <ProfileForm title="Your profile" initial={state.profile} onSave={saveProfile} />
-              <SettingsScreen onChanged={() => {}} onDeleteAll={deleteAll} />
+              <SettingsScreen onChanged={() => {}} onDeleteAll={deleteAll} onRestored={afterRestore} />
               <View style={{ paddingHorizontal: 8 }}>
                 <Text style={{ color: colors.sub, marginTop: 20, fontSize: 13 }}>
                   Data source: {state.source === 'demo' ? '🎮 demo data' : '📱 phone health data'}

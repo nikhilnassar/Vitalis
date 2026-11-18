@@ -13,3 +13,6 @@ export * from './badges';
 export * from './insights';
 export * from './journal';
 export * from './labs';
+export * from './sleepdebt';
+export * from './vitals';
+export * from './experiments';

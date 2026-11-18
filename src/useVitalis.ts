@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { CoverageItem } from './health/assemble';
 import { loadDemo, loadFromPlatform, Source } from './health';
-import { Analysis, JournalEntry, LabResult } from './metrics';
+import { Analysis, Experiment, JournalEntry, LabResult } from './metrics';
 import { Manual, build } from './pipeline';
 import { reportError } from './errors';
 import { KEYS, readJson, wipeAll, writeJson } from './storage';
@@ -71,11 +71,16 @@ export function useVitalis() {
     writeJson(KEYS.cache, { analysis: b.analysis, profile: b.profile, coverage: b.coverage, savedAt: now } satisfies Cache);
   }, []);
 
+  const busy = useRef(false);
+  const lastLoad = useRef(0);
   const load = useCallback(
     async (source: Source, quiet = false) => {
+      if (busy.current) return; // never run two reads at once
+      busy.current = true;
+      lastLoad.current = Date.now();
       if (!quiet) setState((s) => ({ ...s, phase: 'loading', source }));
       try {
-        const data = source === 'demo' ? loadDemo() : await loadFromPlatform();
+        const data = source === 'demo' ? loadDemo() : await loadFromPlatform({ quiet });
         setRaw(data);
         await AsyncStorage.setItem(KEYS.source, source);
         await compute(data, source);
@@ -83,6 +88,8 @@ export function useVitalis() {
         reportError(e, 'load');
         // Keep showing the last good result if there is one.
         setState((s) => (s.analysis && quiet ? { ...s, stale: true } : { phase: 'error', error: e?.message ?? String(e), source }));
+      } finally {
+        busy.current = false;
       }
     },
     [compute],
@@ -133,6 +140,33 @@ export function useVitalis() {
     [recompute],
   );
 
+  const startExperiment = useCallback(
+    async (habit: string, mode: 'avoid' | 'do', days: number) => {
+      const all = await readJson<Experiment[]>(KEYS.experiments, []);
+      // Starting tomorrow keeps today's journal entry out of the "before" period.
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      const p = (n: number) => String(n).padStart(2, '0');
+      const start = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+      await writeJson(KEYS.experiments, [...all, { id: `${Date.now()}`, habit, mode, start, days }]);
+      await recompute();
+    },
+    [recompute],
+  );
+  const stopExperiment = useCallback(
+    async (id: string) => {
+      const all = await readJson<Experiment[]>(KEYS.experiments, []);
+      await writeJson(KEYS.experiments, all.filter((e) => e.id !== id));
+      await recompute();
+    },
+    [recompute],
+  );
+  /** After restoring a backup, reread everything stored on the phone. */
+  const afterRestore = useCallback(async () => {
+    if (raw && state.source) await compute(raw, state.source);
+    else if (state.source) await load(state.source, true);
+  }, [raw, state.source, compute, load]);
+
   const addBp = useCallback(
     (sys: number, dia: number, pulse?: number) => updateManual((m) => ({ ...m, bp: [...m.bp, { t: Date.now(), sys, dia, pulse, source: 'manual' as const } as BpReading] })),
     [updateManual],
@@ -181,7 +215,7 @@ export function useVitalis() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
       const cur = stateRef.current;
-      if (s === 'active' && cur.phase === 'ready' && cur.source === 'platform') load('platform', true);
+      if (s === 'active' && cur.phase === 'ready' && cur.source === 'platform' && Date.now() - lastLoad.current > 60_000) load('platform', true);
     });
     return () => sub.remove();
   }, [load]);
@@ -210,6 +244,9 @@ export function useVitalis() {
     setFeel,
     addLab,
     deleteLab,
+    startExperiment,
+    stopExperiment,
+    afterRestore,
     disconnect,
     deleteAll,
     refresh: () => state.source && load(state.source, true),

@@ -7,13 +7,13 @@ export type Source = 'platform' | 'demo';
 export const platformName = Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect';
 
 /** Ask for permission and read ~45 days of data from the phone's health store. */
-export async function loadFromPlatform(opts: { background?: boolean } = {}): Promise<RawHealthData> {
+export async function loadFromPlatform(opts: { background?: boolean; quiet?: boolean } = {}): Promise<RawHealthData> {
   // Required lazily so each OS only loads its own native module.
   const mod =
     Platform.OS === 'ios'
       ? (require('./appleHealth') as typeof import('./appleHealth'))
       : (require('./healthConnect') as typeof import('./healthConnect'));
-  if (opts.background && Platform.OS === 'android') await (mod as typeof import('./healthConnect')).initQuiet();
+  if ((opts.background || opts.quiet) && Platform.OS === 'android') await (mod as typeof import('./healthConnect')).initQuiet();
   else await mod.requestAccess();
   return mod.readRaw();
 }

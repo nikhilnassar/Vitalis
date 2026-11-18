@@ -7,15 +7,43 @@ import { colors } from '../theme';
 const hm = (h: number) => `${Math.floor(h)}h ${Math.round((h % 1) * 60)}m`;
 const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+function Balance({ a }: { a: Analysis }) {
+  const b = a.sleepBalance;
+  const col = b.debtLevel === 'none' ? colors.mint : b.debtLevel === 'small' ? colors.sun : colors.coral;
+  const bed = b.suggestedBed ? `${String(b.suggestedBed.hour).padStart(2, '0')}:${String(b.suggestedBed.minute).padStart(2, '0')}` : undefined;
+  return (
+    <Card title="Sleep debt, last 7 nights" emoji="🏦" delay={100}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Stat label="Debt" value={b.nights >= 3 ? b.debtHours : '--'} unit="h" color={col} />
+        <Stat label="Avg sleep" value={b.avgHours ?? '--'} unit="h" sub={`need ${b.needHours} h`} />
+        <Stat label="Regularity" value={b.consistency ?? '--'} unit={b.consistency !== undefined ? '%' : undefined} />
+      </View>
+      <Text style={{ color: colors.sub, lineHeight: 20, marginTop: 12 }}>{b.text}</Text>
+      {bed ? <Row left="🛏️ Bedtime for tonight's need" right={bed} /> : null}
+      {b.socialJetlagMin !== undefined ? (
+        <Row left="Weekend vs weekday shift" right={`${b.socialJetlagMin > 0 ? '+' : ''}${Math.round(b.socialJetlagMin)} min`} rightColor={Math.abs(b.socialJetlagMin) > 60 ? colors.coral : colors.mint} />
+      ) : null}
+      <Note>Extra sleep on one night only offsets part of a short week. A weekend shift over an hour is like flying a time zone every Monday.</Note>
+    </Card>
+  );
+}
+
 export function SleepScreen({ a }: { a: Analysis }) {
   const sleep = a.today.sleep;
   if (!sleep) {
     return (
+      <View>
       <Card title="Sleep" emoji="🌙">
         <Text style={{ color: colors.sub, lineHeight: 21 }}>No sleep found for last night 🦉. Wear your tracker to bed and let it sync with Apple Health or Health Connect.</Text>
       </Card>
+      <Balance a={a} />
+      </View>
     );
   }
+  return <SleepBody a={a} sleep={sleep} />;
+}
+
+function SleepBody({ a, sleep }: { a: Analysis; sleep: NonNullable<Analysis['today']['sleep']> }) {
   const m = sleep.stageMinutes;
   const total = Math.max(1, m.awake + m.light + m.deep + m.rem);
   const stages: [string, number, string, string][] = [
@@ -58,6 +86,8 @@ export function SleepScreen({ a }: { a: Analysis }) {
           <Note>Your tracker did not report sleep stages, so only duration and efficiency are scored.</Note>
         )}
       </Card>
+
+      <Balance a={a} />
 
       <Card title="Debt and rhythm" emoji="⏰" delay={120}>
         <Row left="Short of your need" right={sleep.debtHours > 0 ? hm(sleep.debtHours) : 'None 🎉'} rightColor={sleep.debtHours > 1 ? colors.coral : colors.mint} />

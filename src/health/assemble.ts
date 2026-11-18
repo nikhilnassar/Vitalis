@@ -67,6 +67,8 @@ export function assemble(raw: RawHealthData, profile: UserProfile, lastDays = 90
     const window = sleep ? [sleep.start, sleep.end] : [from, from + 10 * HOUR];
     const hrvVals = inRange(raw.hrv, (x) => x.t, window[0], window[1]).map((x) => x.ms);
     const respVals = inRange(raw.respRate, (x) => x.t, window[0], window[1]).map((x) => x.rpm);
+    const spo2Vals = inRange(raw.spo2, (x) => x.t, window[0], window[1]).map((x) => x.pct).filter((v) => v > 50 && v <= 100);
+    const tempVals = inRange(raw.bodyTemp, (x) => x.t, window[0], window[1]).map((x) => x.c).filter((v) => v > 30 && v < 43);
     const platformRhr = inRange(raw.restingHr, (x) => x.t, from, to).map((x) => x.bpm);
     const hrDay = inRange(raw.heartRate, (x) => x.t, from - 12 * HOUR, to);
 
@@ -89,6 +91,9 @@ export function assemble(raw: RawHealthData, profile: UserProfile, lastDays = 90
       hrv: hrvVals.length ? round(mean(hrvVals), 1) : undefined,
       rhr: platformRhr.length ? round(mean(platformRhr)) : sleep ? restingFromSleep(hrDay, sleep) : undefined,
       respRate: respVals.length ? round(mean(respVals), 1) : undefined,
+      spo2: spo2Vals.length ? round(mean(spo2Vals), 1) : undefined,
+      spo2Min: spo2Vals.length ? Math.min(...spo2Vals) : undefined,
+      tempC: tempVals.length ? round(mean(tempVals), 2) : undefined,
       hrSamples: hrDay.filter((x) => x.t >= from),
       steps: steps.length ? steps.reduce((s, x) => s + x.count, 0) : undefined,
       activeKcal: energy.length ? round(energy.reduce((s, x) => s + x.kcal, 0)) : undefined,
@@ -133,6 +138,8 @@ export function coverage(raw: RawHealthData, platform: string, now = Date.now(),
     item('hrv', 'Overnight HRV', '📉', raw.hrv.map((x) => x.t), 'Many trackers do not share HRV. Recovery still works from resting heart rate and sleep, just with less precision.'),
     item('steps', 'Steps', '👟', raw.steps.map((x) => x.start), `Allow steps in ${platform}, and check your tracker's app is set to share them.`),
     item('energy', 'Active calories', '🔥', raw.activeEnergy.map((x) => x.start), 'Without these, calorie burn is estimated from steps and workouts.'),
+    item('spo2', 'Blood oxygen (SpO2)', '🫁', raw.spo2.map((x) => x.t), 'Optional. Only some trackers share overnight SpO2. It adds a night-time vitals check.'),
+    item('temp', 'Body temperature', '🌡️', raw.bodyTemp.map((x) => x.t), 'Optional. A small rise above your normal can be an early sign of illness.'),
     item('weight', 'Weight', '⚖️', raw.weight.map((x) => x.t), 'Turn on sharing in your scale app, or add weigh-ins by hand.'),
     item('bp', 'Blood pressure', '🩺', raw.bp.map((x) => x.t), 'Turn on sharing in your cuff app, or log readings by hand.'),
   ];

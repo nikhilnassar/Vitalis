@@ -20,8 +20,9 @@ export function initErrorReporting(optedIn: boolean) {
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!optedIn || !dsn || sentry) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const S = require('@sentry/react-native');
+    // Optional: add @sentry/react-native yourself to enable this. Resolved at runtime so the app never depends on it.
+    const name = '@sentry/react-native';
+    const S = require(name);
     S.init({
       dsn,
       sendDefaultPii: false,

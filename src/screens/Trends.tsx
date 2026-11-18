@@ -1,11 +1,15 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { Share } from 'react-native';
+import { BigButton } from '../components/ui';
 import { Bars, Card, Note, Pill, Spark } from '../components/ui';
+import { Experiments } from './Experiments';
+import { buildWeeklyReport } from '../report';
 import { MIN_LOGGED_DAYS } from '../metrics';
 import { Analysis, bandFor } from '../metrics';
 import { bandColor, colors } from '../theme';
 
-export function Trends({ a }: { a: Analysis }) {
+export function Trends({ a, onStartExperiment, onStopExperiment }: { a: Analysis; onStartExperiment: (habit: string, mode: 'avoid' | 'do', days: number) => void; onStopExperiment: (id: string) => void }) {
   const last30 = a.days.slice(-30);
   return (
     <View>
@@ -21,6 +25,22 @@ export function Trends({ a }: { a: Analysis }) {
       </Card>
       <Card title="Strain" emoji="⚡" delay={140}>
         <Bars values={last30.map((d) => (d.strain.hasData ? d.strain.strain : null))} max={21} colorFor={() => colors.sky} empty="No heart-rate, workout or step data to score effort yet 👟" />
+      </Card>
+      <Card title="Overnight vitals" emoji="🫁" delay={150}>
+        {a.vitals.spo2 ? (
+          <Text style={{ color: colors.text, lineHeight: 21 }}>Blood oxygen, last {a.vitals.spo2.nights} nights: average {a.vitals.spo2.avg}%, lowest {a.vitals.spo2.min}%.</Text>
+        ) : (
+          <Text style={{ color: colors.sub, lineHeight: 21 }}>No overnight blood oxygen yet. It appears if your watch records SpO2 and shares it with Health Connect.</Text>
+        )}
+        {a.vitals.temp ? (
+          <Text style={{ color: colors.text, lineHeight: 21, marginTop: 8 }}>
+            Body temperature: {a.vitals.temp.recent} °C lately{a.vitals.temp.deviation !== undefined ? `, ${a.vitals.temp.deviation > 0 ? '+' : ''}${a.vitals.temp.deviation} °C vs your usual` : ''}.
+          </Text>
+        ) : null}
+        {a.vitals.notes.map((n, i) => (
+          <Text key={i} style={{ color: colors.sun, lineHeight: 20, marginTop: 8 }}>⚠️ {n}</Text>
+        ))}
+        <Note>Wrist sensors are less accurate than medical devices. Vitalis only flags clear, repeated shifts. Not a diagnosis.</Note>
       </Card>
       <Card title="Long-term biomarkers" emoji="🧬" delay={160}>
         <Text style={{ color: colors.sub, lineHeight: 20, marginBottom: 6 }}>The last 30 days against the 30 before. Slow shifts here matter more than any single day.</Text>
@@ -66,6 +86,11 @@ export function Trends({ a }: { a: Analysis }) {
         )}
         <Text style={{ color: colors.sub, lineHeight: 20, marginTop: 12 }}>🎯 {a.journal.feel.text}</Text>
         <Note>Patterns in your own data, not proof of cause. A habit and a bad night can share a hidden cause such as a rough week.</Note>
+      </Card>
+      <Experiments a={a} onStart={onStartExperiment} onStop={onStopExperiment} />
+      <Card title="Weekly report" emoji="🗒️" delay={210}>
+        <Text style={{ color: colors.sub, lineHeight: 20 }}>A plain-text summary of your last 7 days, ready to send to yourself, a coach or a doctor.</Text>
+        <BigButton label="Share weekly report" emoji="📤" color={colors.sky} onPress={() => Share.share({ message: buildWeeklyReport(a), title: 'Vitalis weekly report' }).catch(() => {})} />
       </Card>
       <Card title="This week vs the 2 weeks before" emoji="🔁" delay={220}>
         {a.coaching.trends.map((t) => {
