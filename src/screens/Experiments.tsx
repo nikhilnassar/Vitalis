@@ -15,13 +15,13 @@ const VERDICT = {
 export function Experiments({ a, onStart, onStop }: { a: Analysis; onStart: (habit: string, mode: 'avoid' | 'do', days: number) => void; onStop: (id: string) => void }) {
   const [picking, setPicking] = useState(false);
   const [mode, setMode] = useState<'avoid' | 'do'>('avoid');
-  const active = a.experiments.filter((e) => e.status === 'running').length;
+  const active = (a.experiments ?? []).filter((e) => e.status === 'running').length;
   const label = (id: string) => HABITS.find((h) => h.id === id);
 
   return (
     <Card title="Personal experiments" emoji="🧪" delay={200}>
       <Text style={{ color: colors.sub, lineHeight: 20 }}>Test one change for 14 days and see what it does to your HRV, resting heart rate, recovery and sleep.</Text>
-      {a.experiments.map((r) => {
+      {(a.experiments ?? []).map((r) => {
         const h = label(r.exp.habit);
         const v = VERDICT[r.verdict];
         return (

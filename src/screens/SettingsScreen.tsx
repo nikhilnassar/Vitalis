@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { createBackup, restoreBackup } from '../backup';
 import Constants from 'expo-constants';
-import { BigButton, Card, Note } from '../components/ui';
+import { BigButton, Card, Chip, Note } from '../components/ui';
 import { clearErrorLog, initErrorReporting, LoggedError, readErrorLog } from '../errors';
 import { cancelAllNotifications, ensurePermission } from '../notify';
 import { setBackgroundEnabled } from '../background';
@@ -43,7 +43,7 @@ export function SettingsScreen({ onChanged, onDeleteAll, onRestored }: { onChang
   const update = async (patch: Partial<Settings>) => {
     const next = { ...s, ...patch };
     // Notifications need the OS permission; if it is refused, leave the switch off and say why.
-    if ((patch.morningSummary || patch.bedtimeReminder || patch.bpReminder) && !(await ensurePermission())) {
+    if ((patch.morningSummary || patch.bedtimeReminder || patch.bpReminder || patch.weighInReminder) && !(await ensurePermission())) {
       setDenied(true);
       return;
     }
@@ -54,7 +54,7 @@ export function SettingsScreen({ onChanged, onDeleteAll, onRestored }: { onChang
     setDenied(false);
     setS(next);
     await saveSettings(next);
-    const any = next.morningSummary || next.bedtimeReminder || next.bpReminder;
+    const any = next.morningSummary || next.bedtimeReminder || next.bpReminder || next.weighInReminder;
     await setBackgroundEnabled(any);
     if (!any) await cancelAllNotifications();
     if (patch.crashReports !== undefined) initErrorReporting(next.crashReports);
@@ -69,9 +69,18 @@ export function SettingsScreen({ onChanged, onDeleteAll, onRestored }: { onChang
 
   return (
     <View>
+      <Card title="Appearance" emoji="🎨" delay={0}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(['dark', 'light', 'auto'] as const).map((m) => (
+            <Chip key={m} label={m === 'auto' ? 'Match phone' : m === 'dark' ? 'Dark' : 'Light'} selected={s.theme === m} onPress={() => update({ theme: m })} />
+          ))}
+        </View>
+      </Card>
+
       <Card title="Notifications" emoji="🔔" delay={0}>
         <Toggle label="Morning summary" sub="Your recovery and strain target once the day starts. Delivered when the phone next syncs in the background." on={s.morningSummary} onChange={(v) => update({ morningSummary: v })} />
         <Toggle label="Bedtime reminder" sub="A nudge 45 minutes before the bedtime that fits tonight's sleep need and your usual wake time." on={s.bedtimeReminder} onChange={(v) => update({ bedtimeReminder: v })} />
+        <Toggle label="Weigh-in reminder" sub="Monday and Thursday 7:30, after waking." on={s.weighInReminder} onChange={(v) => update({ weighInReminder: v })} />
         <Toggle label="Weekly blood pressure reminder" sub="Sunday 9:00 prompt to take a cuff reading." on={s.bpReminder} onChange={(v) => update({ bpReminder: v })} />
         {denied ? <Text style={{ color: colors.coral, marginTop: 6, lineHeight: 19 }}>Notifications are blocked for Vitalis. Allow them in your phone's settings, then try again.</Text> : null}
         {bgNote ? <Text style={{ color: colors.sun, marginTop: 6, lineHeight: 19 }}>Health Connect background access was not granted, so summaries refresh only when you open Vitalis. You can allow it in Health Connect settings.</Text> : null}

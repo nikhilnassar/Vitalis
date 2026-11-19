@@ -5,7 +5,9 @@ import { Analysis, BpCategory, categoryLabel } from '../metrics';
 import { colors } from '../theme';
 import { MIN_PAIRS } from '../metrics/bpmodel';
 
-const CAT_COLOR: Record<BpCategory, string> = { low: colors.sky, normal: colors.mint, elevated: colors.sun, high1: colors.coral, high2: colors.pink, urgent: colors.pink };
+const CAT_COLOR = new Proxy({} as Record<BpCategory, string>, {
+  get: (_t, k) => ({ low: colors.sky, normal: colors.mint, elevated: colors.sun, high1: colors.coral, high2: colors.pink, urgent: colors.pink } as Record<string, string>)[k as string],
+});
 const CAT_EMOJI: Record<BpCategory, string> = { low: '💙', normal: '💚', elevated: '💛', high1: '🧡', high2: '❤️', urgent: '🚨' };
 
 const when = (t: number) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });

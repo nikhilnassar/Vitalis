@@ -9,6 +9,7 @@ const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit
 
 function Balance({ a }: { a: Analysis }) {
   const b = a.sleepBalance;
+  if (!b) return null;
   const col = b.debtLevel === 'none' ? colors.mint : b.debtLevel === 'small' ? colors.sun : colors.coral;
   const bed = b.suggestedBed ? `${String(b.suggestedBed.hour).padStart(2, '0')}:${String(b.suggestedBed.minute).padStart(2, '0')}` : undefined;
   return (

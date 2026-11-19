@@ -79,6 +79,8 @@ export interface RawHealthData {
   respRate: { t: number; rpm: number }[];
   spo2: { t: number; pct: number }[];
   bodyTemp: { t: number; c: number }[];
+  /** Typed in by hand: average overnight SpO2 for the night ending on `date` (YYYY-MM-DD). */
+  manualSpo2?: { date: string; pct: number }[];
   sleep: SleepSegment[];
   steps: { start: number; end: number; count: number }[];
   activeEnergy: { start: number; end: number; kcal: number }[];
@@ -91,7 +93,7 @@ export interface RawHealthData {
   boneMass: { t: number; kg: number }[];
   bp: BpReading[];
   /** Read diagnostics from the platform adapter (not scores). */
-  meta?: { errors: string[]; limitedHistory?: boolean };
+  meta?: { errors: string[]; limitedHistory?: boolean; found?: { name: string; count: number; newest: number; apps: string[] }[] };
 }
 
 export const emptyRaw = (): RawHealthData => ({

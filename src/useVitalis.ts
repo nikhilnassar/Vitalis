@@ -24,6 +24,7 @@ export interface State {
   coverage?: CoverageItem[];
   readErrors?: string[];
   limitedHistory?: boolean;
+  found?: { name: string; count: number; newest: number; apps: string[] }[];
   error?: string;
   /** Showing the last saved result while a fresh read is under way (or failed). */
   stale?: boolean;
@@ -65,6 +66,7 @@ export function useVitalis() {
       coverage: b.coverage,
       readErrors: data.meta?.errors,
       limitedHistory: data.meta?.limitedHistory,
+      found: data.meta?.found,
       stale: false,
       updatedAt: now,
     });
@@ -107,7 +109,8 @@ export function useVitalis() {
           readJson<JournalEntry[]>(KEYS.journal, []),
           readJson<LabResult[]>(KEYS.labs, []),
         ]);
-        if (cache?.analysis) {
+        const fresh = !!(cache?.analysis && cache.analysis.sleepBalance && cache.analysis.vitals && Array.isArray(cache.analysis.experiments) && Array.isArray(cache.analysis.today?.strain?.workouts));
+        if (cache?.analysis && fresh) {
           setState({ phase: 'ready', analysis: cache.analysis, profile: cache.profile, source, manual, journal, labs, coverage: cache.coverage, stale: true, updatedAt: cache.savedAt });
           load(source, true);
         } else {
@@ -168,13 +171,25 @@ export function useVitalis() {
   }, [raw, state.source, compute, load]);
 
   const addBp = useCallback(
-    (sys: number, dia: number, pulse?: number) => updateManual((m) => ({ ...m, bp: [...m.bp, { t: Date.now(), sys, dia, pulse, source: 'manual' as const } as BpReading] })),
+    (sys: number, dia: number, pulse?: number) =>
+      updateManual((m) => {
+        const now = Date.now();
+        // Ignore an identical reading logged within the last 5 minutes (a double tap or repeat submit).
+        if (m.bp.some((r) => r.sys === sys && r.dia === dia && Math.abs(now - r.t) < 5 * 60_000)) return m;
+        return { ...m, bp: [...m.bp, { t: now, sys, dia, pulse, source: 'manual' as const } as BpReading] };
+      }),
     [updateManual],
   );
   const addWeight = useCallback(
     (kg: number, bodyFatPct?: number) => updateManual((m) => ({ ...m, weight: [...m.weight, { t: Date.now(), kg, bodyFatPct }] })),
     [updateManual],
   );
+  const addSpo2 = useCallback(
+    (pct: number, date: string) =>
+      updateManual((m) => ({ ...m, spo2: [...(m.spo2 ?? []).filter((x) => x.date !== date), { date, pct }].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-120) })),
+    [updateManual],
+  );
+  const deleteSpo2 = useCallback((date: string) => updateManual((m) => ({ ...m, spo2: (m.spo2 ?? []).filter((x) => x.date !== date) })), [updateManual]);
   const deleteBp = useCallback((t: number) => updateManual((m) => ({ ...m, bp: m.bp.filter((r) => r.t !== t) })), [updateManual]);
 
   const updateJournal = useCallback(
@@ -239,6 +254,8 @@ export function useVitalis() {
     saveProfile,
     addBp,
     addWeight,
+    addSpo2,
+    deleteSpo2,
     deleteBp,
     toggleHabit,
     setFeel,

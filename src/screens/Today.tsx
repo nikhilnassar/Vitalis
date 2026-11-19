@@ -124,7 +124,29 @@ export function Today({
         {today.strain.hasData ? (
           <>
             <Row left="Load" right={`${today.strain.load}`} />
+            {(today.strain.movementLoad ?? 0) > 0 ? <Row left="Everyday movement credit" right={`+${today.strain.movementLoad} load`} /> : null}
             {today.strain.avgHr ? <Row left="Average / peak HR" right={`${today.strain.avgHr} / ${today.strain.peakHr} bpm`} /> : null}
+            {today.strain.workouts?.length ? (
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 4 }}>Workouts</Text>
+                {today.strain.workouts.map((w) => {
+                  const hh = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const zm = w.zoneMinutes;
+                  return (
+                    <View key={w.start} style={{ marginBottom: 10 }}>
+                      <Row left={`🏋️ ${w.type} · ${hh(w.start)} · ${w.minutes} min`} right={w.load > 0 ? `${w.strain.toFixed(1)} strain` : 'no HR'} rightColor={colors.sky} />
+                      {w.load > 0 ? (
+                        <Text style={{ color: colors.sub, fontSize: 12, lineHeight: 18 }}>
+                          Avg {w.avgHr} / peak {w.peakHr} bpm · zones 1-5: {zm.slice(1).map((m) => Math.round(m)).join(' / ')} min
+                        </Text>
+                      ) : (
+                        <Text style={{ color: colors.sub, fontSize: 12 }}>No heart-rate samples were recorded during this session.</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
             {today.strain.source === 'estimated' ? <Note>No continuous heart rate yet today, so this is estimated from workouts and steps.</Note> : null}
           </>
         ) : (

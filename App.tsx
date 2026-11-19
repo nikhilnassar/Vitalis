@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
+import { Appearance } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, ScrollViewInstance, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Banner, BigButton } from './src/components/ui';
+import { Banner, BigButton, rebuildStyles } from './src/components/ui';
 import { URGENT_TEXT } from './src/metrics';
 import { TABS, Tab } from './src/nav';
 import { Body } from './src/screens/Body';
@@ -22,7 +23,7 @@ import { Onboarding } from './src/screens/Onboarding';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { loadSettings } from './src/settings';
 import { KEYS } from './src/storage';
-import { colors } from './src/theme';
+import { applyTheme, colors, ThemeMode } from './src/theme';
 import { todayKey, useVitalis } from './src/useVitalis';
 
 export default function App() {
@@ -34,19 +35,41 @@ export default function App() {
 }
 
 function AppInner() {
-  const { state, load, saveProfile, addBp, addWeight, deleteBp, toggleHabit, setFeel, addLab, deleteLab, startExperiment, stopExperiment, afterRestore, deleteAll, disconnect, refresh } = useVitalis();
+  const { state, load, saveProfile, addBp, addWeight, addSpo2, deleteSpo2, deleteBp, toggleHabit, setFeel, addLab, deleteLab, startExperiment, stopExperiment, afterRestore, deleteAll, disconnect, refresh } = useVitalis();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
+  const [themeTick, setThemeTick] = useState(0);
+  const [resolved, setResolved] = useState<'dark' | 'light'>('dark');
+  // Update the shared palette in place, rebuild the shared styles, then remount the tree so every screen redraws.
+  const setTheme = (mode: ThemeMode) => {
+    setThemeMode(mode);
+    setResolved(applyTheme(mode, Appearance.getColorScheme()));
+    rebuildStyles();
+    setThemeTick((n) => n + 1);
+  };
+  useEffect(() => {
+    if (themeMode !== 'auto') return;
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      setResolved(applyTheme('auto', colorScheme));
+      rebuildStyles();
+      setThemeTick((n) => n + 1);
+    });
+    return () => sub.remove();
+  }, [themeMode]);
 
   useEffect(() => {
     AsyncStorage.getItem(KEYS.onboarded).then((v) => setOnboarded(v === '1')).catch(() => setOnboarded(true));
-    loadSettings().then((s) => initErrorReporting(s.crashReports));
+    loadSettings().then((s) => {
+      initErrorReporting(s.crashReports);
+      if (s.theme && s.theme !== 'dark') setTheme(s.theme);
+    });
   }, []);
 
   // Whenever fresh results arrive, apply the person's notification choices (best effort).
   useEffect(() => {
     if (!state.analysis || state.stale || state.source !== 'platform') return;
     loadSettings().then(async (s) => {
-      const any = s.morningSummary || s.bedtimeReminder || s.bpReminder;
+      const any = s.morningSummary || s.bedtimeReminder || s.bpReminder || s.weighInReminder;
       if (!any) return;
       await setBackgroundEnabled(true);
       await syncNotifications(state.analysis!, s, { allowMorning: true });
@@ -123,14 +146,14 @@ function AppInner() {
           ) : null}
           {tab === 'Today' && <Today a={a} go={setTab} todayEntry={state.journal?.find((e) => e.date === todayKey())} onFeel={(v) => setFeel(todayKey(), v)} onHabit={(id) => toggleHabit(todayKey(), id)} updatedAt={state.updatedAt} stale={state.stale} />}
           {tab === 'Sleep' && <SleepScreen a={a} />}
-          {tab === 'Trends' && <Trends a={a} onStartExperiment={startExperiment} onStopExperiment={stopExperiment} />}
+          {tab === 'Trends' && <Trends a={a} manualSpo2={state.manual?.spo2 ?? []} onAddSpo2={addSpo2} onDeleteSpo2={deleteSpo2} onStartExperiment={startExperiment} onStopExperiment={stopExperiment} />}
           {tab === 'Body' && <Body a={a} profile={state.profile} onAddWeight={addWeight} onAddLab={addLab} onDeleteLab={deleteLab} />}
           {tab === 'BP' && <Bp a={a} onAdd={addBp} onDelete={deleteBp} />}
           {tab === 'You' && (
             <View>
-              {state.coverage ? <DataCheck items={state.coverage} errors={state.readErrors} limited={state.limitedHistory} /> : null}
+              {state.coverage ? <DataCheck items={state.coverage} errors={state.readErrors} limited={state.limitedHistory} found={state.found} /> : null}
               <ProfileForm title="Your profile" initial={state.profile} onSave={saveProfile} />
-              <SettingsScreen onChanged={() => {}} onDeleteAll={deleteAll} onRestored={afterRestore} />
+              <SettingsScreen onChanged={(s) => { if (s.theme !== themeMode) setTheme(s.theme); }} onDeleteAll={deleteAll} onRestored={afterRestore} />
               <View style={{ paddingHorizontal: 8 }}>
                 <Text style={{ color: colors.sub, marginTop: 20, fontSize: 13 }}>
                   Data source: {state.source === 'demo' ? '🎮 demo data' : '📱 phone health data'}
@@ -158,9 +181,9 @@ function AppInner() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider key={themeTick}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-        <StatusBar style="light" />
+        <StatusBar style={resolved === 'light' ? 'dark' : 'light'} />
         {content}
       </SafeAreaView>
     </SafeAreaProvider>

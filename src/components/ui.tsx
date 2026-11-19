@@ -336,7 +336,7 @@ export function Pill({ text, color }: { text: string; color: string }) {
 
 export const Note = ({ children }: { children: React.ReactNode }) => <Text style={s.note}>{children}</Text>;
 
-const s = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: radius.card, padding: space.lg, marginBottom: space.md, borderWidth: 1.5, borderColor: colors.border, overflow: 'hidden' },
   accentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 5 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: space.md },
@@ -354,3 +354,9 @@ const s = StyleSheet.create({
   fieldLabel: { color: colors.sub, fontSize: 12, fontWeight: '600' },
   field: { backgroundColor: colors.cardAlt, color: colors.text, borderRadius: 14, padding: 14, fontSize: 17, borderWidth: 1.5, borderColor: colors.border, marginTop: 6, fontWeight: '600' },
 });
+
+let s = makeStyles();
+/** Call after the theme changes so the shared styles pick up the new colours. */
+export const rebuildStyles = () => {
+  s = makeStyles();
+};

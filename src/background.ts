@@ -19,7 +19,7 @@ if (Platform.OS !== 'web') {
   TaskManager.defineTask(TASK, async () => {
     try {
       const s = await loadSettings();
-      if (!s.morningSummary && !s.bedtimeReminder && !s.bpReminder) return BackgroundTask.BackgroundTaskResult.Success;
+      if (!s.morningSummary && !s.bedtimeReminder && !s.bpReminder && !s.weighInReminder) return BackgroundTask.BackgroundTaskResult.Success;
       if ((await readJson<string>(KEYS.source, '')) !== 'platform') return BackgroundTask.BackgroundTaskResult.Success;
       const built = await build(await loadFromPlatform({ background: true }), 'platform');
       if (built.analysis) await syncNotifications(built.analysis, s, { allowMorning: true });

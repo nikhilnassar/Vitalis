@@ -30,7 +30,7 @@ export function buildWeeklyReport(a: Analysis): string {
   if (a.vitals.spo2) L.push(`Overnight SpO2: avg ${a.vitals.spo2.avg}%, lowest ${a.vitals.spo2.min}%`);
   if (a.vitals.temp?.deviation !== undefined) L.push(`Body temperature vs usual: ${a.vitals.temp.deviation > 0 ? '+' : ''}${a.vitals.temp.deviation} °C`);
   for (const t of a.insights.trends.slice(0, 3)) if (t.verdict !== 'unknown' && t.delta != null) L.push(`${t.label}: ${t.verdict} (${t.delta > 0 ? '+' : ''}${t.delta} ${t.unit} vs the prior 30 days)`);
-  const done = a.experiments.filter((e) => e.status === 'running' || e.verdict !== 'not-enough-data');
+  const done = (a.experiments ?? []).filter((e) => e.status === 'running' || e.verdict !== 'not-enough-data');
   if (done.length) {
     L.push('');
     for (const e of done.slice(0, 3)) L.push(`Experiment: ${e.exp.mode === 'avoid' ? 'avoid' : 'do'} ${e.exp.habit}, day ${e.dayNumber} of ${e.exp.days}. ${e.summary}`);

@@ -36,8 +36,5 @@
     "test": "TZ=Asia/Dubai tsx test/run.ts",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true
   }
 }

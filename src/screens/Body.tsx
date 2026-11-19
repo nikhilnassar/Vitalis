@@ -65,7 +65,10 @@ export function Body({ a, profile, onAddWeight, onAddLab, onDeleteLab }: { a: An
             <BigButton label="Save weigh-in" emoji="✅" onPress={save} disabled={!kgOk} />
           </View>
         ) : (
-          <BigButton label="Add a weigh-in" emoji="➕" color={colors.sky} onPress={() => setOpen(true)} />
+          <View>
+            {bc.latest ? <BigButton label={`Log ${bc.latest.weightKg} kg again`} emoji="⚡" color={colors.mint} onPress={() => onAddWeight(bc.latest!.weightKg)} /> : null}
+            <BigButton label="Add a weigh-in" emoji="➕" color={colors.sky} onPress={() => setOpen(true)} />
+          </View>
         )}
       </Card>
 

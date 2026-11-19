@@ -91,8 +91,12 @@ export function assemble(raw: RawHealthData, profile: UserProfile, lastDays = 90
       hrv: hrvVals.length ? round(mean(hrvVals), 1) : undefined,
       rhr: platformRhr.length ? round(mean(platformRhr)) : sleep ? restingFromSleep(hrDay, sleep) : undefined,
       respRate: respVals.length ? round(mean(respVals), 1) : undefined,
-      spo2: spo2Vals.length ? round(mean(spo2Vals), 1) : undefined,
-      spo2Min: spo2Vals.length ? Math.min(...spo2Vals) : undefined,
+      ...(spo2Vals.length
+        ? { spo2: round(mean(spo2Vals), 1), spo2Min: spo2Vals.reduce((m, v) => (v < m ? v : m), Infinity) }
+        : (() => {
+            const mv = raw.manualSpo2?.find((x) => x.date === date);
+            return mv ? { spo2: mv.pct, spo2Min: mv.pct } : {};
+          })()),
       tempC: tempVals.length ? round(mean(tempVals), 2) : undefined,
       hrSamples: hrDay.filter((x) => x.t >= from),
       steps: steps.length ? steps.reduce((s, x) => s + x.count, 0) : undefined,
@@ -130,7 +134,7 @@ export interface CoverageItem {
 export function coverage(raw: RawHealthData, platform: string, now = Date.now(), window = 7): CoverageItem[] {
   const from = dayKey(now - (window - 1) * 24 * HOUR);
   const daysOf = (ts: number[]) => new Set(ts.map((t) => dayKey(t)).filter((k) => k >= from)).size;
-  const item = (key: string, label: string, emoji: string, ts: number[], tip: string): CoverageItem => ({ key, label, emoji, days: daysOf(ts), window, tip, latest: ts.length ? Math.max(...ts) : undefined });
+  const item = (key: string, label: string, emoji: string, ts: number[], tip: string): CoverageItem => ({ key, label, emoji, days: daysOf(ts), window, tip, latest: ts.length ? ts.reduce((m, v) => (v > m ? v : m), -Infinity) : undefined });
   return [
     item('sleep', 'Sleep', '🌙', raw.sleep.map((x) => x.end), `Wear your tracker overnight and make sure it shares sleep with ${platform}.`),
     item('rhr', 'Resting heart rate', '🫀', [...raw.restingHr.map((x) => x.t), ...raw.heartRate.map((x) => x.t)], `Needed for recovery. Allow heart rate in ${platform}.`),
@@ -138,7 +142,7 @@ export function coverage(raw: RawHealthData, platform: string, now = Date.now(),
     item('hrv', 'Overnight HRV', '📉', raw.hrv.map((x) => x.t), 'Many trackers do not share HRV. Recovery still works from resting heart rate and sleep, just with less precision.'),
     item('steps', 'Steps', '👟', raw.steps.map((x) => x.start), `Allow steps in ${platform}, and check your tracker's app is set to share them.`),
     item('energy', 'Active calories', '🔥', raw.activeEnergy.map((x) => x.start), 'Without these, calorie burn is estimated from steps and workouts.'),
-    item('spo2', 'Blood oxygen (SpO2)', '🫁', raw.spo2.map((x) => x.t), 'Optional. Only some trackers share overnight SpO2. It adds a night-time vitals check.'),
+    item('spo2', 'Blood oxygen (SpO2)', '🫁', [...raw.spo2.map((x) => x.t), ...(raw.manualSpo2 ?? []).map((x) => dayStart(x.date) + 6 * HOUR)], 'Optional. Google Health does not share SpO2 with Health Connect, so type last night\'s average in on the Trends tab.'),
     item('temp', 'Body temperature', '🌡️', raw.bodyTemp.map((x) => x.t), 'Optional. A small rise above your normal can be an early sign of illness.'),
     item('weight', 'Weight', '⚖️', raw.weight.map((x) => x.t), 'Turn on sharing in your scale app, or add weigh-ins by hand.'),
     item('bp', 'Blood pressure', '🩺', raw.bp.map((x) => x.t), 'Turn on sharing in your cuff app, or log readings by hand.'),

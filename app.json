@@ -39,6 +39,7 @@
         "android.permission.health.READ_BONE_MASS",
         "android.permission.health.READ_OXYGEN_SATURATION",
         "android.permission.health.READ_BODY_TEMPERATURE",
+        "android.permission.health.READ_SKIN_TEMPERATURE",
         "android.permission.health.READ_HEALTH_DATA_HISTORY",
         "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
         "android.permission.POST_NOTIFICATIONS"
@@ -67,8 +68,7 @@
             "minSdkVersion": 26,
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false,
-            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.room.** { *; }\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.startup.** { *; }",
-            "enableMinifyInReleaseBuilds": false
+            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.room.** { *; }\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.startup.** { *; }"
           }
         }
       ],
@@ -87,10 +87,7 @@
       "bundler": "metro"
     },
     "extra": {
-      "privacyPolicyUrl": "https://YOUR-DOMAIN/privacy  (replace before submitting)",
-      "eas": {
-        "projectId": "9dc6a626-2a98-41f8-be3d-ba0c72b205af"
-      }
+      "privacyPolicyUrl": "https://YOUR-DOMAIN/privacy  (replace before submitting)"
     }
   }
 }

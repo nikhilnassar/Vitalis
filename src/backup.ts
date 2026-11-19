@@ -36,7 +36,7 @@ export function parseBackup(text: string): { ok: true; backup: Backup } | { ok: 
   const d = j.data;
   const shape: Record<BackupKey, (v: unknown) => boolean> = {
     profile: isObj,
-    manual: (v) => isObj(v) && isArr((v as any).bp) && isArr((v as any).weight),
+    manual: (v) => isObj(v) && isArr((v as any).bp) && isArr((v as any).weight) && ((v as any).spo2 === undefined || isArr((v as any).spo2)),
     journal: isArr,
     labs: isArr,
     settings: isObj,

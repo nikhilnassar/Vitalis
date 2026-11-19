@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Share } from 'react-native';
-import { BigButton } from '../components/ui';
+import { BigButton, Field } from '../components/ui';
 import { Bars, Card, Note, Pill, Spark } from '../components/ui';
 import { Experiments } from './Experiments';
 import { buildWeeklyReport } from '../report';
@@ -9,8 +9,11 @@ import { MIN_LOGGED_DAYS } from '../metrics';
 import { Analysis, bandFor } from '../metrics';
 import { bandColor, colors } from '../theme';
 
-export function Trends({ a, onStartExperiment, onStopExperiment }: { a: Analysis; onStartExperiment: (habit: string, mode: 'avoid' | 'do', days: number) => void; onStopExperiment: (id: string) => void }) {
+export function Trends({ a, manualSpo2, onAddSpo2, onDeleteSpo2, onStartExperiment, onStopExperiment }: { a: Analysis; manualSpo2: { date: string; pct: number }[]; onAddSpo2: (pct: number, date: string) => Promise<void> | void; onDeleteSpo2: (date: string) => Promise<void> | void; onStartExperiment: (habit: string, mode: 'avoid' | 'do', days: number) => void; onStopExperiment: (id: string) => void }) {
   const last30 = a.days.slice(-30);
+  const [spo2In, setSpo2In] = useState('');
+  const spo2Ok = Number(spo2In) >= 70 && Number(spo2In) <= 100;
+  const lastNight = a.days[a.days.length - 1]?.date;
   return (
     <View>
       <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900', marginBottom: 12, marginTop: 4 }}>Trends 📈</Text>
@@ -27,17 +30,35 @@ export function Trends({ a, onStartExperiment, onStopExperiment }: { a: Analysis
         <Bars values={last30.map((d) => (d.strain.hasData ? d.strain.strain : null))} max={21} colorFor={() => colors.sky} empty="No heart-rate, workout or step data to score effort yet 👟" />
       </Card>
       <Card title="Overnight vitals" emoji="🫁" delay={150}>
-        {a.vitals.spo2 ? (
-          <Text style={{ color: colors.text, lineHeight: 21 }}>Blood oxygen, last {a.vitals.spo2.nights} nights: average {a.vitals.spo2.avg}%, lowest {a.vitals.spo2.min}%.</Text>
+        {a.vitals?.spo2 ? (
+          <Text style={{ color: colors.text, lineHeight: 21 }}>Blood oxygen, last {a.vitals?.spo2.nights} nights: average {a.vitals?.spo2.avg}%, lowest {a.vitals?.spo2.min}%.</Text>
         ) : (
-          <Text style={{ color: colors.sub, lineHeight: 21 }}>No overnight blood oxygen yet. It appears if your watch records SpO2 and shares it with Health Connect.</Text>
+          <Text style={{ color: colors.sub, lineHeight: 21 }}>No overnight blood oxygen yet. Google Health doesn't share SpO2 with Health Connect, so type last night's average below (it's in the Google Health app).</Text>
         )}
-        {a.vitals.temp ? (
+        {a.vitals?.temp ? (
           <Text style={{ color: colors.text, lineHeight: 21, marginTop: 8 }}>
-            Body temperature: {a.vitals.temp.recent} °C lately{a.vitals.temp.deviation !== undefined ? `, ${a.vitals.temp.deviation > 0 ? '+' : ''}${a.vitals.temp.deviation} °C vs your usual` : ''}.
+            Body temperature: {a.vitals?.temp.recent} °C lately{a.vitals?.temp.deviation !== undefined ? `, ${a.vitals?.temp.deviation > 0 ? '+' : ''}${a.vitals?.temp.deviation} °C vs your usual` : ''}.
           </Text>
         ) : null}
-        {a.vitals.notes.map((n, i) => (
+        <View style={{ marginTop: 12 }}>
+          <Field label="Last night's average SpO2 (%) from your tracker's app" value={spo2In} onChangeText={setSpo2In} placeholder="96" />
+          <BigButton
+            label="Save SpO2"
+            emoji="🫁"
+            disabled={!spo2Ok || !lastNight}
+            onPress={async () => {
+              await onAddSpo2(Number(spo2In), lastNight);
+              setSpo2In('');
+            }}
+          />
+          {manualSpo2.slice(-5).reverse().map((x) => (
+            <View key={x.date} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
+              <Text style={{ color: colors.sub }}>{x.date}: {x.pct}%</Text>
+              <Text style={{ color: colors.coral, fontWeight: '700' }} onPress={() => onDeleteSpo2(x.date)}>Delete</Text>
+            </View>
+          ))}
+        </View>
+        {a.vitals?.notes.map((n, i) => (
           <Text key={i} style={{ color: colors.sun, lineHeight: 20, marginTop: 8 }}>⚠️ {n}</Text>
         ))}
         <Note>Wrist sensors are less accurate than medical devices. Vitalis only flags clear, repeated shifts. Not a diagnosis.</Note>

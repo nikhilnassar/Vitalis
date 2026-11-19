@@ -12,12 +12,14 @@ export interface ManualWeight {
 export interface Manual {
   bp: BpReading[];
   weight: ManualWeight[];
+  spo2?: { date: string; pct: number }[];
 }
 
 /** Layer the user's hand-entered readings over whatever the phone's health store gave us. */
 export function mergeManual(raw: RawHealthData, m: Manual): RawHealthData {
   return {
     ...raw,
+    manualSpo2: m.spo2 ?? [],
     bp: [...raw.bp, ...m.bp],
     weight: [...raw.weight, ...m.weight.map((w) => ({ t: w.t, kg: w.kg }))],
     bodyFat: [...raw.bodyFat, ...m.weight.filter((w) => w.bodyFatPct !== undefined).map((w) => ({ t: w.t, pct: w.bodyFatPct as number }))],

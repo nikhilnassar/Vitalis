@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RawHealthData } from '../types';
 import { demoRaw, sparseRaw } from './demo';
 
@@ -13,8 +14,26 @@ export async function loadFromPlatform(opts: { background?: boolean; quiet?: boo
     Platform.OS === 'ios'
       ? (require('./appleHealth') as typeof import('./appleHealth'))
       : (require('./healthConnect') as typeof import('./healthConnect'));
-  if ((opts.background || opts.quiet) && Platform.OS === 'android') await (mod as typeof import('./healthConnect')).initQuiet();
-  else await mod.requestAccess();
+  if (opts.background && Platform.OS === 'android') await (mod as typeof import('./healthConnect')).initQuiet();
+  else if (opts.quiet && Platform.OS === 'android') {
+    const hc = mod as typeof import('./healthConnect');
+    await hc.initQuiet();
+    // A quiet launch refresh normally shows no dialog. When this build needs a permission the person has not
+    // been asked for yet (a new data type), ask once. The marker is saved first so it can never loop.
+    const key = 'vitalis.permasked.v1';
+    let asked = '';
+    try {
+      asked = (await AsyncStorage.getItem(key)) ?? '';
+    } catch {}
+    if (asked !== hc.PERMISSION_SET) {
+      try {
+        await AsyncStorage.setItem(key, hc.PERMISSION_SET);
+      } catch {}
+      try {
+        await hc.requestAccess();
+      } catch {}
+    }
+  } else await mod.requestAccess();
   return mod.readRaw();
 }
 
